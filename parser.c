@@ -11,7 +11,7 @@
 //value and token
 //tk will hold both characters and integer values
 int val, tk;
-char *str = "//hello \n int a;\n      int b; \n     char c";
+char *str = "hello c";
 char *sstr; //Start of string
 char *tp; //text pointer
 
@@ -42,21 +42,19 @@ int addr = 0; //will hold index of wanted item
 // {, (, *, ID, 
 
 void next(){
-	while(1){ // while no useful token found
-		tk = *tp++;
-		//Newline
-		if(tk == '\n'){
-			tk = *tp++;
-		}
+	while(tk = *tp++){ // while no useful token found
 		if(tk == ' '){
 			while(*tp == ' ' && *tp != '0'){
 				tp++;
 			}
-			tk = *tp++; //set and move
+		}
+		//Newline
+		else if(tk == '\n'){
+			tk = *tp++;
 		}
 		//Comment or Division
 		//Faster to check for cases then to let next run through all other possibilities
-		if(tk == '/'){
+		else if(tk == '/'){
 			if(*tp == '/'){
 				while(*tp != '\n' && *tp != '0'){ // where '0' is the end of string character, basically denoting end of file
 		    		tp++;
@@ -78,14 +76,14 @@ void next(){
 		//Using ASCII Values:
 		else if((tk >= 'a' && tk <= 'z')||(tk >= 'A' && tk <= 'Z')||(tk == '_')){
 			sstr = tp - 1; // remember start of string
-					//CAN'T do stp = tk because tk is an integer not a pointer
+					//CAN'T do sstr = tk because tk is an integer not a pointer
 			while((*tp >= 'a' && *tp <= 'z')||(*tp >= 'A' && *tp <= 'Z')||(*tp == '_')||(*tp >= '0' && *tp <= '9')){
 				tp++;  //find end of string	
 			}
 			//compare
 			addr = 0;
 			while (tab[addr].tktype){
-				if(!memcmp(tab[addr].name, sstr, tp-sstr)){ //if there is an entry, returns 0. !0 = 1
+				if((strlen(tab[addr].name) == tp-sstr) && !memcmp(tab[addr].name, sstr, tp-sstr)){ //if there is an entry, returns 0. !0 = 1
 					tk = Id;
 					return; //addr is in correct spot
 				}
