@@ -49,7 +49,7 @@ void next(){
 			}
 		}
 		//Newline
-		else if(tk == '\n'){
+		else if(tk == '\n' || tk == '\t'){
 			tk = *tp++;
 		}
 		//Comment or Division
