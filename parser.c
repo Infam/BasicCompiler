@@ -11,9 +11,14 @@
 //value and token
 //tk will hold both characters and integer values
 int val, tk;
-char *str = "hello c";
+char *str = "int main(int a, int b, int c){}";
 char *sstr; //Start of string
 char *tp; //text pointer
+int type; // token type: int abc
+
+int varc; //Local Variable Counter
+
+int locbp = 2; //local base pointer offset
 
 //Starting enum from 128:
 enum {
@@ -84,7 +89,7 @@ void next(){
 			addr = 0;
 			while (tab[addr].tktype){
 				if((strlen(tab[addr].name) == tp-sstr) && !memcmp(tab[addr].name, sstr, tp-sstr)){ //if there is an entry, returns 0. !0 = 1
-					tk = Id;
+					tk = tab[addr].tktype;
 					return; //addr is in correct spot
 				}
 				addr++;
@@ -95,12 +100,79 @@ void next(){
 				tk = Id;
 				return;
 		}
+		//TODO: Check for Integers
+		else if(tk == '}' || tk == '{' || tk == ')' || tk == '(' || tk == ',' || tk == '\"' || tk == '\'') return;
+	}
+}
+
+//void match(int expr, char *p) {
+//	if (expr)  printf("seen: %s", p);
+//	else exit();
+//}
+
+void func(){ //Deal with global variables and func decl.
+	if(tk == Int || tk == Char){
+		next();
+		if(tk != Id) {
+			printf("Bad Global Declaration");
+			return;
+		}
+		next();
+		if(tk == '('){ //Function Start
+			//TODO:
+			//Change Id value to machine code start	
+			tab[addr].class = Fun;
+			tab[addr].type  = Glo;
+				
+			varc = 0;	
+			next();
+			while(tk != ')' && tk != 0){
+				if(tk != Int && tk != Char){
+					printf("Bad Local Declaration");
+					return;
+				}
+				type = tk;
+		
+				next(); // Stored/checked ID in table
+				if(tk != Id){
+					printf("Bad Local Declaration");
+					return;
+				}
+
+				tab[addr].type  = type;
+				tab[addr].class = Loc;
+				tab[addr].value = varc;
+				varc++;
+
+				next();
+				if(tk != ',' && tk != ')'){
+					printf("Bad Syntax: %c", tk);
+					return;
+				}
+			        if(tk ==',') 
+					next();
+			}
+			locbp += varc; 
+			//TODO: int func();
+			next();
+			if(tk != '{'){
+				printf("Bad Function");
+				return;
+			}
+			
+			next();
+			if(tk != '}'){
+				printf("Bad Function");
+				return;
+			}
+		}
+		else if(tk == ','){
+		}
 	}
 }
 int main(){
 	tp = str;
-	do{
-		next();
-	}while(tk);
+	next();
+	func();
 	return 0;
 }
