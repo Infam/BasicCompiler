@@ -1,4 +1,5 @@
 //Parser:
+//
 //Used to turn code into tokens & beginning the process of converting to machine code.
 //QUESTIONS
 //Use Hashing to reduce search time?
@@ -11,7 +12,7 @@
 //value and token
 //tk will hold both characters and integer values
 int val, tk;
-char *str = "int main(int a, int b, int c){}";
+char *str = "int main(int a, int b, int c){int b;}";
 char *sstr; //Start of string
 char *tp; //text pointer
 int type; // token type: int abc
@@ -101,7 +102,7 @@ void next(){
 				return;
 		}
 		//TODO: Check for Integers
-		else if(tk == '}' || tk == '{' || tk == ')' || tk == '(' || tk == ',' || tk == '\"' || tk == '\'') return;
+		else if(tk == '}' || tk == '{' || tk == ')' || tk == '(' || tk == ',' || tk == '\"' || tk == '\'' || tk == ';') return;
 	}
 }
 
@@ -110,63 +111,106 @@ void next(){
 //	else exit();
 //}
 
+void statement(){
+	printf("Statement");
+	next();
+}
 void func(){ //Deal with global variables and func decl.
-	if(tk == Int || tk == Char){
-		next();
-		if(tk != Id) {
-			printf("Bad Global Declaration");
-			return;
-		}
-		next();
-		if(tk == '('){ //Function Start
-			//TODO:
-			//Change Id value to machine code start	
-			tab[addr].class = Fun;
-			tab[addr].type  = Glo;
-				
-			varc = 0;	
+	while(tk){
+		if(tk == Int || tk == Char){
 			next();
-			while(tk != ')' && tk != 0){
-				if(tk != Int && tk != Char){
-					printf("Bad Local Declaration");
-					return;
-				}
-				type = tk;
-		
-				next(); // Stored/checked ID in table
-				if(tk != Id){
-					printf("Bad Local Declaration");
-					return;
-				}
+			if(tk != Id) {
+				printf("Bad Global Declaration");
+				return;
+			}
+			next();
+			if(tk == '('){ //Function Start
+				//TODO:
+				//Change Id value to machine code start	
+				tab[addr].class = Fun;
+				tab[addr].type  = Glo;
 
-				tab[addr].type  = type;
-				tab[addr].class = Loc;
-				tab[addr].value = varc;
-				varc++;
+				varc = 0;	
+				next();
+				while(tk != ')' && tk != 0){
+					if(tk != Int && tk != Char){
+						printf("Bad Local Declaration");
+						return;
+					}
+					type = tk;
+
+					next(); // Stored/checked ID in table
+					if(tk != Id){
+						printf("Bad Local Declaration");
+						return;
+					}
+
+					tab[addr].type  = type;
+					tab[addr].class = Loc;
+					tab[addr].value = varc;
+					varc++;
+
+					next();
+					if(tk != ',' && tk != ')'){
+						printf("Bad Syntax: %c", tk);
+						return;
+					}
+					if(tk ==',') 
+						next();
+				}
+				locbp += varc; 
+				//TODO: int func();
+				next();
+				if(tk != '{'){
+					printf("Bad Function");
+					return;
+				}
 
 				next();
-				if(tk != ',' && tk != ')'){
-					printf("Bad Syntax: %c", tk);
+				while(tk == Int || tk == Char) {
+                                        next();
+                                        if(tk != Id){
+                                                printf("Bad Declaration");
+                                                return;
+                                        }
+                                        next();
+                                        if(tk == ','){
+                                                while(tk != ';'){
+                                                        next();
+							//TODO: Add local 
+                                                        if(tk != Id){
+                                                                printf("Bad Declaration");
+                                                                return;
+                                                        }
+
+                                                        next();
+                                                }
+                                        }
+                                        if(tk == ';') next();
+                                        else{
+                                                printf("Bad Declaration");
+                                                return;
+                                        }
+                                }
+				//TODO: If {}, FINISH
+				//ELSE:
+                                statement();
+				if(tk != '}'){
+					printf("Bad Function");
 					return;
 				}
-			        if(tk ==',') 
+				next();
+			}
+			else if(tk == ','){
+				while(tk != ';'){  
+					next();                           
+					if(tk != Id){
+						printf("Bad Declaration");     
+						return;                       
+					}                                    
 					next();
+				}
 			}
-			locbp += varc; 
-			//TODO: int func();
-			next();
-			if(tk != '{'){
-				printf("Bad Function");
-				return;
-			}
-			
-			next();
-			if(tk != '}'){
-				printf("Bad Function");
-				return;
-			}
-		}
-		else if(tk == ','){
 		}
 	}
 }
