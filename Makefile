@@ -5,5 +5,5 @@ parse: parser.c
 	gcc -g parser.c
 	./a.out
 clean: 
-	rm ./a.out
-	rm log
+	[ -f a.out ] && rm a.out || true
+	[ -f log ] && rm log || true
