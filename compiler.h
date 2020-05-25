@@ -14,7 +14,7 @@ enum {
 
 // Pointers
 int *sp, *bp, *pc, *cmd; //stack pointers, and machine code pointers
-int locbp = 2; //local base pointer offset
+int locbp = 2; //local base pointer offset: Only counts parameters. +2 for pc, return point
 int eax, inst; // eax register, inst = (pc -1)
 
 //Actual text
@@ -32,6 +32,8 @@ int varc; //Local Variable Counter
 
 struct tab{ //symbol table
 	int Tktype; char* Name; int Class, Type, Value;
+
+	int gblClass, gblType, gblValue; //in the case of a global declaration w/ same name
 } 
 
 tab[100] = {

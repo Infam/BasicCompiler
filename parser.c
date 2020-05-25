@@ -148,16 +148,31 @@ void expr(int lvl){ //tk is at start
 }
 
 void glbl(){ //Deal with global variables and func decl.
-		while(tk){ //While have token
+	while(tk){ //While have token
 		check(tk != Int && tk != Char, "Bad Global Declaration: Missing Type");
+		type = tk;
 		next();
 		check(tk != Id, "Bad Global Declaration: Missing ID");
+		check(tab[addr].Class == Glo, "Bad Global Declaration: Duplicate");
 		next();
-		if(tk == '('){ //Function Start
+		if(tk == ','){ //int a, b, c;
+			while(tk != ';'){  
+				next(); //a
+				check(tk != Id,"Bad Declaration: Missing ID");
+				tab[addr].Class = Glo;
+				tab[addr].Type  = type;
+				next(); //,
+			}
+		}
+		else if(tk == '('){ //Function Start
 			//TODO:
 			//Change Id.Value to machine code start	
+			*cmd = ENT; 
+			tab[addr].Value = cmd; //TODO: CORRECT?
+			cmd++;
+
 			tab[addr].Class = Fun;
-			tab[addr].Type  = Glo;
+			tab[addr].Type  = type;
 
 			varc = 0;	
 			next();
@@ -166,66 +181,83 @@ void glbl(){ //Deal with global variables and func decl.
 				type = tk;
 				next(); // Stored/checked ID in table
 				check(tk != Id,"Bad Local Declaration: Missing ID");
+				check(tab[addr].Class = Loc,"Bad Local Declaration: Duplicate"); //func(int a, int a)
 
-				tab[addr].Type  = type; //Which one?
-				tab[addr].Class = Loc;
-				tab[addr].Value = varc;
+				if(tab[addr].Class){ //If not filled out, fill out
+					tab[addr].Type  = type;
+					tab[addr].Class = Loc;
+					tab[addr].Value = varc;
+				}
+				else{ //Then there is a global variable w/ same name
+
+					tab[addr].gblType  = tab[addr].Type;
+					tab[addr].gblClass = tab[addr].Class;
+					tab[addr].gblValue = tab[addr].Value;
+
+					tab[addr].Type  = type; 
+					tab[addr].Class = Loc;
+					tab[addr].Value = varc;
+				}
 				varc++;
-
 				next();
-				check(tk != ',' && tk != ')',"Bad Syntax: Missing )");
+				check(tk != ',' && tk != ')',"Bad Syntax: Missing ) or ,");
 				if(tk ==',') 
 					next();
 			}
-			locbp += varc; 
 			//TODO: int func();
 			next();
 			check(tk != '{', "Bad Function: Missing {");
 
 			next();
 			while((tk == Int || tk == Char) && tk != '}') { //If {}, FINISH
-				type = tk;
-				next();
-				check(tk != Id,"Bad Declaration: Missing ID");
+				while(tk != ';' && tk != 0){
+					type = tk;
+					next();
+					check(tk != Id,"Bad Declaration: Missing ID");
+					check(tab[addr].Class == Loc,"Bad Declaration: Duplicate");
 
-				//TODO: Check Global vs local
-				tab[addr].Type  = type; //Which one?
-				tab[addr].Class = Loc;
-				tab[addr].Value = varc;
-				varc++;
-
-				next();
-				if(tk == ','){
-					while(tk != ';'){
-						next();
-						//TODO: Add local 
-						check(tk != Id,"Bad Declaration: Missing ID");
-
-						tab[addr].Type  = type; //Which one?
+					if(tab[addr].Class){ //If not filled out, fill out
+						tab[addr].Type  = type;
 						tab[addr].Class = Loc;
 						tab[addr].Value = varc;
-						varc++;
-
-						next();
 					}
+					else{ //Then there is a global variable w/ same name
+
+						tab[addr].gblType  = tab[addr].Type;
+						tab[addr].gblClass = tab[addr].Class;
+						tab[addr].gblValue = tab[addr].Value;
+
+						tab[addr].Type  = type; 
+						tab[addr].Class = Loc;
+						tab[addr].Value = varc;
+					}
+					varc++; locbp++;
 				}
-				if(tk == ';') next();
-				else check(1,"Bad Syntax: Missing ;");
+				next();
 			}
+			*cmd = locbp; cmd++; // Finish ENT
 			//ELSE:
 			while(tk != '}' && tk != 0){
 				stmt();
 			}
 			check(tk != '}', "Bad Function: Missing }");
 			next();
-		}
-		else if(tk == ','){ //int a, b, c;
-			while(tk != ';'){  
-				next(); //a
-				check(tk != Id,"Bad Declaration: Missing ID");
-				next(); //,
+			// Function Done! Prep leaving scope:
+			int counter = 0;
+			while(tab[counter].Tktype){
+				if(tab[counter].gblClass){
+						tab[addr].Type   = tab[addr].gblType;
+						tab[addr].Class  = tab[addr].gblClass;
+						tab[addr].Value  = tab[addr].gblValue;
+						//tab[addr].gblType  = tab[addr].gblClass = tab[addr].gblValue = 0; //Probably not necessary?
+				}
+				counter++;
 			}
-		}
+			*cmd = LEV; cmd++;
+		} 
+		else if(tk == ';')
+			next();
+		check(tk != ';',"Bad Declaration: Missing ;");
 	}
 }
 int main(){

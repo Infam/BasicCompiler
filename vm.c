@@ -49,6 +49,9 @@ int main(void){
 		inst = *pc++;
 		//define:
 		//IF TAKE PARAM: pc++;
+		// CMD   3  ...
+		//  |    |   |
+		// inst  pc  pc+1
 		if(inst == ENT){*--sp = (int)bp; bp = sp; sp = sp - *pc; pc++;} 
 		if(inst == LEV){sp = bp; bp = (int *)*sp++; pc = (int *)*sp++;}
 		if(inst == LEA){eax = (int)(bp + *pc++);}
@@ -56,6 +59,11 @@ int main(void){
 		if(inst == PSH){*--sp = eax;}
 		if(inst == LI ){eax = *(int *)eax;}
 		if(inst == SI ){*(int *)*sp++ = eax;}
+
+		if(inst == JMP){pc = (int *)*pc;} //pc and not pc++ since NO NEED TO MOVE
+		if(inst == JSR){eax = *(int *)eax;}
+		if(inst == BZ ){eax = *(int *)eax;}
+		if(inst == BNZ ){eax = *(int *)eax;}
 
 		//expr
 		if(inst == ADD){eax = *sp++ + eax;}
