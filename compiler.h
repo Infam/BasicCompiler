@@ -1,5 +1,5 @@
 #define int long long //So converting from int pointer to int has no issues
-
+#define DATASZ 1000
 //machine code
 enum { LEA ,IMM ,JMP ,JSR ,BZ  ,BNZ ,ENT ,ADJ ,LEV ,LI  ,LC  ,SI  ,SC  ,PSH ,
 	OR  ,XOR ,AND ,EQ  ,NE  ,LT  ,GT  ,LE  ,GE  ,SHL ,SHR ,ADD ,SUB ,MUL ,DIV ,MOD ,
@@ -12,11 +12,17 @@ enum {
 	Assign, Cond, Lor, Lan, Or, Xor, And, Eq, Ne, Lt, Gt, Le, Ge, Shl, Shr, Add, Sub, Mul, Div, Mod, Inc, Dec, Brak
 };
 
+// File
+int fd; //File descriptor
+
+
+
 // Pointers
+int *cnt; //count of command: used to print commands
 int *sp, *bp, *pc, *cmd; //stack pointers, and machine code pointers
-int locbp = 2; //local base pointer offset: Only counts parameters. +2 for pc, return point
 int eax, inst; // eax register, inst = (pc -1)
 
+int addr1, addr2;
 //Actual text
 char *str; 
 char *sstr; //Start of string
@@ -28,15 +34,17 @@ int tk; //the token type
 int addr = 0; //will hold index of wanted item
 int type; // token type: int abc
 int val; //value of found integers, i.e. int a = 20
+int parmc; //function parameter count
 int varc; //Local Variable Counter
 
+int * gdata; //Global data area & strings
 struct tab{ //symbol table
 	int Tktype; char* Name; int Class, Type, Value;
 
 	int gblClass, gblType, gblValue; //in the case of a global declaration w/ same name
 } 
 
-tab[100] = {
+tab[DATASZ] = {
 	{ Char,     "char", 0,0,0},
 	{ Else,     "else", 0,0,0},
 	{ Enum,     "enum", 0,0,0},

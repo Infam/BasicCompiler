@@ -8,8 +8,8 @@ int main(void){
 
 	//Create area for stack and code text area
 	//Must be inside main or else won't run
-	bp = sp = malloc(sizeof(int)*100);
-	pc = cmd= malloc(sizeof(int)*100);
+	bp = sp = malloc(sizeof(int)*DATASZ);
+	pc = cmd= malloc(sizeof(int)*DATASZ);
 
 	/* 
 	   bp ------------
@@ -61,8 +61,8 @@ int main(void){
 		if(inst == SI ){*(int *)*sp++ = eax;}
 
 		if(inst == JMP){pc = (int *)*pc;} //pc and not pc++ since NO NEED TO MOVE
-		if(inst == JSR){eax = *(int *)eax;}
-		if(inst == BZ ){eax = *(int *)eax;}
+		if(inst == JSR){*--sp = (int)(pc + 1); pc = (int *)*pc;} //Changing frames, PSH pc and JMP
+		if(inst == BZ ){if(eax){pc = pc + 1;}else{pc = (int *)*pc;}} // Jump if false, walk if true
 		if(inst == BNZ ){eax = *(int *)eax;}
 
 		//expr
@@ -82,3 +82,4 @@ int main(void){
 		if(inst == EXIT){return 0;}
 	}
 }
+//Combos:
