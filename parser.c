@@ -7,6 +7,11 @@
 #include <unistd.h>
 #include "compiler.h"
 
+//TODO: Set up Main func
+//TODO: Set up func jump
+//TODO: Set up gdata location
+//
+
 //Get next useful token
 // {, (, *, ID, 
 void print(){
@@ -64,6 +69,10 @@ void next(){
 			addr = 0;
 			while (tab[addr].Tktype){
 				if((strlen(tab[addr].Name) == tp-sstr) && !memcmp(tab[addr].Name, substr, tp-sstr)){ //if there is an entry, returns 0. !0 = 1
+					//if(tab[addr].Name == "printf"){
+					//	tk = PRTF;
+					//	return;
+					//}
 					tk = tab[addr].Tktype;
 					return; //addr is in correct spot
 				}
@@ -164,31 +173,54 @@ void stmt(){ //tk is at start
 void expr(int lvl){ //tk is at start
 	printf("Expression Here! Tk Value: %lld\n", tk);
 	if(tk == Num){
+		next();
 		*cmd++ = IMM;
 		*cmd++ = val;
-		next();
 	}
 	else if(tk == Id){
-		*cmd++ = LEA;
-		if(tab[addr].Value < parmc) //if parameter
-			*cmd++ = 1 + parmc - tab[addr].Value;
-		else
-			*cmd++ = parmc - 1 - tab[addr].Value;
-		*cmd++ = LI;
-		next();
+		next(); //ID can't be followed by another ID: Addr won't move
+		if(tab[addr].Class == Fun){ //Should already be in table: Func declaration can't be inside another function
+			int func = addr; //Store location
+			check(tk != '(',"Bad Function: Missing (");
+			next();
+
+			//Push to stack
+			int pin = 0; //count parameters in
+			while(tk != ')' && tk != 0){
+				expr(Assign); //Use lowest level	
+				*cmd++ = PSH; //Everything handled recursively
+				pin++;
+				if(tk == ',')
+					next();
+			}
+			*cmd++ = JSR;
+			*cmd++ = tab[func].Value;
+			*cmd++ = ADJ; // move back
+			*cmd++ = pin;
+			next();
+		}
+		else if(tab[addr].Class == Loc || tab[addr].Class == Glo){
+			*cmd++ = LEA;
+			if(tab[addr].Value < parmc) //if parameter
+				*cmd++ = 1 + parmc - tab[addr].Value;
+			else
+				*cmd++ = parmc - 1 - tab[addr].Value;
+			*cmd++ = LI;
+		}
 	}
+
 	while(tk >= lvl){
 		if(tk == Assign){
-			*(cmd-1) = PSH;
 			next();
+			*(cmd-1) = PSH;
 			expr(Assign+1);
 			*cmd++ = SI;
 		}
 		if(tk == Add){
 			next();
+			*cmd++ = PSH; //fetch value of first term: a + b
 			expr(Add+1);
 			*cmd++ = ADD;
-
 		}
 	}
 }
@@ -216,13 +248,14 @@ void glbl(){ //Deal with global variables and func decl.
 			//TODO:
 			//Change Id.Value to machine code start	
 			*cmd = ENT; 
-			tab[addr].Value = *cmd;
+			tab[addr].Value = &(*cmd);
 			cmd++;
 
 			tab[addr].Class = Fun;
 			tab[addr].Type  = type;
 
 			varc = 0;	
+			parmc= 0;	
 			next();
 			while(tk != ')' && tk != 0){
 				check(tk != Int && tk != Char,"Bad Local Declaration: Missing Type");

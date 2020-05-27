@@ -64,6 +64,9 @@ int main(void){
 		if(inst == JSR){*--sp = (int)(pc + 1); pc = (int *)*pc;} //Changing frames, PSH pc and JMP
 		if(inst == BZ ){if(eax){pc = pc + 1;}else{pc = (int *)*pc;}} // Jump if false, walk if true
 		if(inst == BNZ ){eax = *(int *)eax;}
+		if(inst == ADJ){sp = sp + *pc; pc++;} //Move sp back over parameters
+
+		if(inst == PRTF){printf("%d\n", eax);} // Print out eax
 
 		//expr
 		if(inst == ADD){eax = *sp++ + eax;}

@@ -8,7 +8,7 @@ enum { LEA ,IMM ,JMP ,JSR ,BZ  ,BNZ ,ENT ,ADJ ,LEV ,LI  ,LC  ,SI  ,SC  ,PSH ,
 //Starting enum from 128:
 enum {
 	Num = 128, Fun, Sys, Glo, Loc, Id,
-	Char, Else, Enum, If, Int, Return, Sizeof, While,
+	Char, Else, Enum, If, Int, Return, Sizeof, While, Printf, 
 	Assign, Cond, Lor, Lan, Or, Xor, And, Eq, Ne, Lt, Gt, Le, Ge, Shl, Shr, Add, Sub, Mul, Div, Mod, Inc, Dec, Brak
 };
 
@@ -53,6 +53,7 @@ tab[DATASZ] = {
 	{ Return, "return", 0,0,0},
 	{ Sizeof, "sizeof", 0,0,0},
 	{ While,   "while", 0,0,0},
+	{ Printf, "printf", 0,0,0},
 	{0} //set all elements to zero, easy to check if filled and use while loops
 };
 
