@@ -20,44 +20,54 @@ enum {
 	Assign, Cond, Lor, Lan, Or, Xor, And, Eq, Ne, Lt, Gt, Le, Ge, Shl, Shr, Add, Sub, Mul, Div, Mod, Inc, Dec, Brak
 };
 
-// File
-int fd; //File descriptor
+struct table{ //symbol table
+	int Tktype; 
+	char* Name; 
+	int Class;
+	int Type;
+	int Value;
+	int gblClass;
+	int gblType;
+	int gblValue; //in the case of a global declaration w/ same name
+};
 
+
+// File
+extern int fd; //File descriptor
 
 // Debug
-char *lp; //Line Pointer
-int ln; //Line Pointer
-int *cnt; //count of command: used to print commands
+extern char *lp; //Line Pointer
+extern int ln; //Line Pointer
+extern int *cnt; //count of command: used to print commands
 
 // Pointers
-int *sp, *bp, *pc, *cmd, *sysc; //stack pointers, and machine code pointers
-int eax, inst; // eax register, inst = (pc -1)
+extern int *sp, *bp, *pc, *cmd, *sysc; //stack pointers, and machine code pointers
+extern int eax, inst; // eax register, inst = (pc -1)
 
-int addr1, addr2;
+extern int addr1, addr2;
+
 //Actual text
-char *str; 
-char *sstr; //Start of string
-char *tp; //text pointer
+extern char *str; 
+extern char *sstr; //Start of string
+extern char *tp; //text pointer
 
 //Symbol table & Next call:
 //tk will hold both characters and integer values
-int tk; //the token type
-int addr; //will hold index of wanted item
-int type; // token type: int abc
-int val; //value of found integers, i.e. int a = 20
-int parmc; //function parameter count
-int varc; //Local Variable Counter
+extern int tk; //the token type
+extern int addr; //will hold index of wanted item
+extern int mainaddr; //Holds address of main function
+extern int type; // token type: int abc
+extern int val; //value of found integers, i.e. int a = 20
+extern int parmc; //function parameter count
+extern int varc; //Local Variable Counter
 
-char * gdata; //Global data area & strings
-struct table{ //symbol table
-	int Tktype; char* Name; int Class, Type, Value;
+extern char * gdata; //Global data area & strings
 
-	int gblClass, gblType, gblValue; //in the case of a global declaration w/ same name
-} tab[DATASZ];
-
+extern struct table tab[DATASZ];
 
 void next();
 void glbl();
 void check();
 void stmt();
 void expr();
+void print();

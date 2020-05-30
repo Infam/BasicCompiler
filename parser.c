@@ -10,7 +10,7 @@
 //TODO: Printf
 //TODO: Set up Main func
 //TODO: Set up gdata location
-//
+
 
 //Get next useful token
 // {, (, *, ID, 
@@ -61,11 +61,11 @@ void next(){
 		//Using ASCII Values:
 		else if((tk >= 'a' && tk <= 'z')||(tk >= 'A' && tk <= 'Z')||(tk == '_')){
 			sstr = tp - 1; // remember start of string
-			char substr[tp-sstr+1];
 			//CAN'T do sstr = tk because tk is an integer not a pointer
 			while((*tp >= 'a' && *tp <= 'z')||(*tp >= 'A' && *tp <= 'Z')||(*tp == '_')||(*tp >= '0' && *tp <= '9')){
 				tp++;  //find end of string	
 			}
+			char substr[tp-sstr+1];
 			memcpy(substr, &sstr[0], tp-sstr);
 			substr[tp-sstr] = '\0';
 			//compare
@@ -83,6 +83,8 @@ void next(){
 			//if done with loop: new variable -> store
 			tab[addr].Tktype = Id;
 			tab[addr].Name = strdup((char *)substr);
+			if(!strcmp((char *)substr,"main"))
+				mainaddr = addr;
 			tk = Id;
 			return;
 		}
@@ -95,15 +97,15 @@ void next(){
 		}
 		else if(tk == '\"'){
 			sstr = tp; // remember start of string "abc"
-			char substr[tp-sstr+1];
 			while(*tp != '\"' && *tp != 0){
 				tp++;  //find end of string	
 			}
 			check(*tp == 0, "Bad String: Missing ");
+			char substr[tp-sstr+1];
 			memcpy(substr, &sstr[0], tp-sstr);
 			substr[tp-sstr] = '\0';
 			gdata = strdup((char *)substr);
-			val = &(*gdata);
+			val = (int)gdata;
 			gdata += sizeof((char*)substr);
 			tk = Str; 
 			tp++;
@@ -115,6 +117,7 @@ void next(){
 }
 
 void check(int expr, char *errmsg){
+	//assert(expr);
 	if (expr){
 		printf("%s\n", errmsg);
 		exit(-1);
@@ -178,7 +181,6 @@ void stmt(){ //tk is at start
 
 	}
 	if(tk == Return){
-		*cmd++ = LEV;
 		printf("Return!\n");
 		expr(Assign);
 	}
@@ -238,7 +240,7 @@ void expr(int lvl){ //tk is at start
 			*cmd++ = pin;
 			next();
 		}
-		else if(tab[addr].Class == Loc || tab[addr].Class == Glo){
+		else if(tab[addr].Class == Loc){
 			*cmd++ = LEA;
 			if(tab[addr].Value < parmc) //if parameter
 				*cmd++ = 1 + parmc - tab[addr].Value;
@@ -246,12 +248,19 @@ void expr(int lvl){ //tk is at start
 				*cmd++ = parmc - 1 - tab[addr].Value;
 			*cmd++ = LI;
 		}
+		else if(tab[addr].Class == Glo){
+			*cmd++ = IMM;
+			*cmd++ = tab[addr].Value; 
+		}
 	}
 
 	while(tk >= lvl){
 		if(tk == Assign){
 			next();
-			*(cmd-1) = PSH;
+			if(tab[addr].Class == Loc)
+				*(cmd-1) = PSH;
+			else
+				*cmd++ = PSH;
 			expr(Assign+1);
 			*cmd++ = SI;
 		}
@@ -279,6 +288,10 @@ void glbl(){ //Deal with global variables and func decl.
 		next();
 	}
 	else if(tk == ','){ //int a, b, c;
+		tab[addr].Class = Glo;
+		tab[addr].Type  = type;
+		tab[addr].Value = (int)gdata;
+		gdata += sizeof(type);
 		while(tk != ';'){  
 			next(); //a
 			check(tk != Id,"Bad Declaration: Missing ID");
@@ -365,7 +378,7 @@ void glbl(){ //Deal with global variables and func decl.
 			next();
 		}
 		*cmd = ENT; 
-		tab[func].Value = &(*cmd++);
+		tab[func].Value = (int)cmd++;
 		*cmd++ = varc-parmc; // Finish ENT
 
 		//ELSE:
@@ -385,23 +398,11 @@ void glbl(){ //Deal with global variables and func decl.
 			}
 			counter++;
 		}
-		*cmd++ = LEV;	
+		if(mainaddr == func)
+			*cmd++ = EXIT;
+		else
+			*cmd++ = LEV;
+		//TODO
+		//if(
 	} 
 }
-//int main(){
-//	cmd  = malloc(sizeof(int)*DATASZ);
-//	str  = malloc(sizeof(char)*DATASZ);
-//	gdata= malloc(sizeof(char)*DATASZ);
-//	tp = str;
-//	lp = tp;
-//	cnt = cmd;
-//
-//	if ((fd = open("code.c", 0)) < 0) { printf("cannot open code file.\n"); return -1; }
-//	if ((read(fd, str, DATASZ)) <= 0) { printf("cannot read code file.\n"); return -1; }
-//
-//	next();
-//	while(tk) //While have token
-//		glbl();
-//	print();
-//	return 0;
-//}
