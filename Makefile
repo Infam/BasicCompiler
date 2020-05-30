@@ -1,3 +1,7 @@
+.DEFAULT_GOAL := run
+run: vm.c parser.c
+	gcc -g vm.c parser.c
+	./a.out
 vm: vm.c
 	gcc -g vm.c
 	./a.out

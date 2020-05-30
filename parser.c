@@ -7,8 +7,8 @@
 #include <unistd.h>
 #include "compiler.h"
 
+//TODO: Printf
 //TODO: Set up Main func
-//TODO: Set up func jump
 //TODO: Set up gdata location
 //
 
@@ -24,15 +24,18 @@ void print(){
 }
 void next(){
 	while(tk = *tp++){ // while no useful token found
-		if(tk == '}' || tk == '{' || tk == ')' || tk == '(' || tk == ',' || tk == '\"' || tk == '\'' || tk == ';') return;
+		if(tk == '}' || tk == '{' || tk == ')' || tk == '(' || tk == ',' || tk == ';') return;
 		else if(tk == ' '){
 			while(*tp == ' ' && *tp != '0'){
 				tp++;
 			}
 		}
 		//Newline
-		else if(tk == '\n' || tk == '\t'){
-			tk = *tp;
+		else if(tk == '\n'){
+			ln++;
+			printf("%d: %.*s", ln, tp-lp, lp);
+			print();
+			lp = tp;
 		}
 		//Comment or Division
 		//Faster to check for cases then to let next run through all other possibilities
@@ -67,13 +70,12 @@ void next(){
 			substr[tp-sstr] = '\0';
 			//compare
 			addr = 0;
-			while (tab[addr].Tktype){
+			while (tab[addr].Name){
 				if((strlen(tab[addr].Name) == tp-sstr) && !memcmp(tab[addr].Name, substr, tp-sstr)){ //if there is an entry, returns 0. !0 = 1
-					//if(tab[addr].Name == "printf"){
-					//	tk = PRTF;
-					//	return;
-					//}
-					tk = tab[addr].Tktype;
+					if(!tab[addr].Tktype) //System call
+						tk = Id;
+					else
+						tk = tab[addr].Tktype;
 					return; //addr is in correct spot
 				}
 				addr++;
@@ -89,6 +91,22 @@ void next(){
 			while(*tp >= '0' && *tp <= '9')
 				val = val*10 + (*tp++ - '0');
 			tk = Num;
+			return;
+		}
+		else if(tk == '\"'){
+			sstr = tp; // remember start of string "abc"
+			char substr[tp-sstr+1];
+			while(*tp != '\"' && *tp != 0){
+				tp++;  //find end of string	
+			}
+			check(*tp == 0, "Bad String: Missing ");
+			memcpy(substr, &sstr[0], tp-sstr);
+			substr[tp-sstr] = '\0';
+			gdata = strdup((char *)substr);
+			val = &(*gdata);
+			gdata += sizeof((char*)substr);
+			tk = Str; 
+			tp++;
 			return;
 		}
 		else if(tk == '='){ if(*tp == '='){tk = Eq; tp++; return;} else{tk = Assign; return;}}
@@ -157,29 +175,50 @@ void stmt(){ //tk is at start
 		*cmd++ = JMP;
 		*cmd++ = (int)addr1++;
 		*addr1 = (int)cmd;
-		
-	}
-	if(tk == Id){
-		printf("id\n");
-		expr(Id);
+
 	}
 	if(tk == Return){
 		*cmd++ = LEV;
 		printf("Return!\n");
 		expr(Assign);
 	}
+	else{
+		expr(Assign);
+	}
 }
 
+//Notes:
+//-------------------------------------------
+//expr Will NEVER parse ; by itself: Done by stmt
+//ANY Num, Str, Id etc. DOESNT call PSH by itself: BC it doesn't know
 void expr(int lvl){ //tk is at start
-	printf("Expression Here! Tk Value: %lld\n", tk);
-	if(tk == Num){
+	if(tk == Num || tk == Str){
 		next();
 		*cmd++ = IMM;
 		*cmd++ = val;
 	}
 	else if(tk == Id){
 		next(); //ID can't be followed by another ID: Addr won't move
-		if(tab[addr].Class == Fun){ //Should already be in table: Func declaration can't be inside another function
+		//TODO
+		if(tab[addr].Class == Sys){
+			int func = addr; //Store location
+			check(tk != '(',"Bad Function: Missing (");
+			next();
+			int count = 1; //Should always take variables
+			while(tk != ')' && tk != 0){
+				expr(Assign);
+				*cmd++ = PSH;
+				if(tk == ','){
+					next();
+					count++;
+				}
+			}
+			*cmd++ = tab[func].Value;
+			*cmd++ = ADJ;
+			*cmd++ = count;
+			next();
+		}
+		else if(tab[addr].Class == Fun){ //Should already be in table: Func declaration can't be inside another function
 			int func = addr; //Store location
 			check(tk != '(',"Bad Function: Missing (");
 			next();
@@ -226,43 +265,81 @@ void expr(int lvl){ //tk is at start
 }
 
 void glbl(){ //Deal with global variables and func decl.
-	while(tk){ //While have token
-		check(tk != Int && tk != Char, "Bad Global Declaration: Missing Type");
-		type = tk;
+	check(tk != Int && tk != Char, "Bad Global Declaration: Missing Type");
+	type = tk;
+	next();
+	check(tk != Id, "Bad Global Declaration: Missing ID");
+	check(tab[addr].Class == Glo, "Bad Global Declaration: Duplicate");
+	next();
+	if(tk == ';'){
+		tab[addr].Class = Glo;
+		tab[addr].Type  = type;
+		tab[addr].Value = (int)gdata;
+		gdata += sizeof(type);
 		next();
-		check(tk != Id, "Bad Global Declaration: Missing ID");
-		check(tab[addr].Class == Glo, "Bad Global Declaration: Duplicate");
-		next();
-		if(tk == ','){ //int a, b, c;
-			while(tk != ';'){  
-				next(); //a
-				check(tk != Id,"Bad Declaration: Missing ID");
-				tab[addr].Class = Glo;
-				tab[addr].Type  = type;
-				next(); //,
-			}
-		}
-		else if(tk == ';')
-			next();
-		else if(tk == '('){ //Function Start
-			//TODO:
-			//Change Id.Value to machine code start	
-			*cmd = ENT; 
-			tab[addr].Value = &(*cmd);
-			cmd++;
-
-			tab[addr].Class = Fun;
+	}
+	else if(tk == ','){ //int a, b, c;
+		while(tk != ';'){  
+			next(); //a
+			check(tk != Id,"Bad Declaration: Missing ID");
+			tab[addr].Class = Glo;
 			tab[addr].Type  = type;
+			tab[addr].Value = (int)gdata;
+			gdata += sizeof(type);
+			next(); //,
+		}
+		next();//move off semicolon
+	}
+	else if(tk == '('){ //Function Start
+		//TODO:
+		//Change Id.Value to machine code start	
+		int func = addr;
 
-			varc = 0;	
-			parmc= 0;	
+		tab[addr].Class = Fun;
+		tab[addr].Type  = type;
+
+		varc = 0;	
+		parmc= 0;	
+		next();
+		while(tk != ')' && tk != 0){
+			check(tk != Int && tk != Char,"Bad Local Declaration: Missing Type");
+			type = tk;
+			next(); // Stored/checked ID in table
+			check(tk != Id,"Bad Local Declaration: Missing ID");
+			check(tab[addr].Class == Loc,"Bad Local Declaration: Duplicate"); //func(int a, int a)
+
+			if(!(tab[addr].Class)){ //If not filled out, fill out
+				tab[addr].Type  = type;
+				tab[addr].Class = Loc;
+				tab[addr].Value = varc;
+			}
+			else{ //Then there is a global variable w/ same name
+
+				tab[addr].gblType  = tab[addr].Type;
+				tab[addr].gblClass = tab[addr].Class;
+				tab[addr].gblValue = tab[addr].Value;
+
+				tab[addr].Type  = type; 
+				tab[addr].Class = Loc;
+				tab[addr].Value = varc;
+			}
+			varc++; parmc++;
 			next();
-			while(tk != ')' && tk != 0){
-				check(tk != Int && tk != Char,"Bad Local Declaration: Missing Type");
-				type = tk;
-				next(); // Stored/checked ID in table
-				check(tk != Id,"Bad Local Declaration: Missing ID");
-				check(tab[addr].Class == Loc,"Bad Local Declaration: Duplicate"); //func(int a, int a)
+			check(tk != ',' && tk != ')',"Bad Syntax: Missing ) or ,");
+			if(tk ==',') 
+				next();
+		}
+		//TODO: int func();
+		next();
+		check(tk != '{', "Bad Function: Missing {");
+
+		next();
+		while((tk == Int || tk == Char) && tk != '}') { //If {}, FINISH
+			type = tk;
+			next();
+			while(tk != ';' && tk != 0){
+				check(tk != Id,"Bad Declaration: Missing ID");
+				check(tab[addr].Class == Loc,"Bad Declaration: Duplicate");
 
 				if(!(tab[addr].Class)){ //If not filled out, fill out
 					tab[addr].Type  = type;
@@ -279,82 +356,52 @@ void glbl(){ //Deal with global variables and func decl.
 					tab[addr].Class = Loc;
 					tab[addr].Value = varc;
 				}
-				varc++; parmc++;
+				varc++;
 				next();
-				check(tk != ',' && tk != ')',"Bad Syntax: Missing ) or ,");
+				check(tk != ',' && tk != ';',"Bad Syntax: Missing ; or ,");
 				if(tk ==',') 
 					next();
 			}
-			//TODO: int func();
 			next();
-			check(tk != '{', "Bad Function: Missing {");
+		}
+		*cmd = ENT; 
+		tab[func].Value = &(*cmd++);
+		*cmd++ = varc-parmc; // Finish ENT
 
-			next();
-			while((tk == Int || tk == Char) && tk != '}') { //If {}, FINISH
-				type = tk;
-				next();
-				while(tk != ';' && tk != 0){
-					check(tk != Id,"Bad Declaration: Missing ID");
-					check(tab[addr].Class == Loc,"Bad Declaration: Duplicate");
-
-					if(!(tab[addr].Class)){ //If not filled out, fill out
-						tab[addr].Type  = type;
-						tab[addr].Class = Loc;
-						tab[addr].Value = varc;
-					}
-					else{ //Then there is a global variable w/ same name
-
-						tab[addr].gblType  = tab[addr].Type;
-						tab[addr].gblClass = tab[addr].Class;
-						tab[addr].gblValue = tab[addr].Value;
-
-						tab[addr].Type  = type; 
-						tab[addr].Class = Loc;
-						tab[addr].Value = varc;
-					}
-					varc++;
-					next();
-					check(tk != ',' && tk != ';',"Bad Syntax: Missing ; or ,");
-					if(tk ==',') 
-						next();
-				}
-				next();
+		//ELSE:
+		while(tk != '}' && tk != 0){
+			stmt();
+		}
+		check(tk != '}', "Bad Function: Missing }");
+		next();
+		// Function Done! Prep leaving scope:
+		int counter = 0;
+		while(tab[counter].Name){
+			if(tab[counter].gblClass){
+				tab[addr].Type   = tab[addr].gblType;
+				tab[addr].Class  = tab[addr].gblClass;
+				tab[addr].Value  = tab[addr].gblValue;
+				//tab[addr].gblType  = tab[addr].gblClass = tab[addr].gblValue = 0; //Probably not necessary?
 			}
-			*cmd++ = varc-parmc; // Finish ENT
-			
-			//ELSE:
-			while(tk != '}' && tk != 0){
-				stmt();
-			}
-			check(tk != '}', "Bad Function: Missing }");
-			next();
-			// Function Done! Prep leaving scope:
-			int counter = 0;
-			while(tab[counter].Tktype){
-				if(tab[counter].gblClass){
-						tab[addr].Type   = tab[addr].gblType;
-						tab[addr].Class  = tab[addr].gblClass;
-						tab[addr].Value  = tab[addr].gblValue;
-						//tab[addr].gblType  = tab[addr].gblClass = tab[addr].gblValue = 0; //Probably not necessary?
-				}
-				counter++;
-			}
-			*cmd++ = LEV;	
-		} 
-	}
+			counter++;
+		}
+		*cmd++ = LEV;	
+	} 
 }
-int main(){
-	cmd  = malloc(sizeof(int)*DATASZ);
-	str  = malloc(sizeof(char)*DATASZ);
-	gdata= malloc(sizeof(char)*DATASZ);
-	tp = str;
-	cnt = cmd;
-	
-	if ((fd = open("code.c", 0)) < 0) { printf("cannot open code file.\n"); return -1; }
-	if ((read(fd, str, DATASZ)) <= 0) { printf("cannot read code file.\n"); return -1; }
-	
-	next();
-	glbl();
-	print();
-	return 0;
-}
+//int main(){
+//	cmd  = malloc(sizeof(int)*DATASZ);
+//	str  = malloc(sizeof(char)*DATASZ);
+//	gdata= malloc(sizeof(char)*DATASZ);
+//	tp = str;
+//	lp = tp;
+//	cnt = cmd;
+//
+//	if ((fd = open("code.c", 0)) < 0) { printf("cannot open code file.\n"); return -1; }
+//	if ((read(fd, str, DATASZ)) <= 0) { printf("cannot read code file.\n"); return -1; }
+//
+//	next();
+//	while(tk) //While have token
+//		glbl();
+//	print();
+//	return 0;
+//}
