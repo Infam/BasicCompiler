@@ -16,7 +16,7 @@ enum { LEA ,IMM ,JMP ,JSR ,BZ  ,BNZ ,ENT ,ADJ ,LEV ,LI  ,LC  ,SI  ,SC  ,PSH ,
 //Starting enum from 128:
 enum {
 	Num = 128, Fun, Sys, Glo, Loc, Id, Str,
-	Char, Else, Enum, If, Int, Return, Sizeof, While, Printf, 
+	Char, Else, Enum, If, Int, Ptr, Return, Sizeof, While, Printf, 
 	Assign, Cond, Lor, Lan, Or, Xor, And, Eq, Ne, Lt, Gt, Le, Ge, Shl, Shr, Add, Sub, Mul, Div, Mod, Inc, Dec, Brak
 };
 
@@ -43,8 +43,6 @@ extern int *cnt; //count of command: used to print commands
 // Pointers
 extern int *sp, *bp, *pc, *cmd, *sysc; //stack pointers, and machine code pointers
 extern int eax, inst; // eax register, inst = (pc -1)
-
-extern int addr1, addr2;
 
 //Actual text
 extern char *str; 

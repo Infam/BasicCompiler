@@ -19,7 +19,7 @@ void print(){
 		printf("%8.4s", &"LEA ,IMM ,JMP ,JSR ,BZ  ,BNZ ,ENT ,ADJ ,LEV ,LI  ,LC  ,SI  ,SC  ,PSH ,"
 				"OR  ,XOR ,AND ,EQ  ,NE  ,LT  ,GT  ,LE  ,GE  ,SHL ,SHR ,ADD ,SUB ,MUL ,DIV ,MOD ,"
 				"OPEN,READ,CLOS,PRTF,MALC,FREE,MSET,MCMP,EXIT,"[*cnt++ * 5]);
-		if (*(cnt-1) <= ADJ) printf(" %d\n", *cnt++); else printf("\n");
+		if (*(cnt-1) <= ADJ) printf(" %lld\n", *cnt++); else printf("\n");
 	}
 }
 void next(){
@@ -33,7 +33,7 @@ void next(){
 		//Newline
 		else if(tk == '\n'){
 			ln++;
-			printf("%d: %.*s", ln, tp-lp, lp);
+			printf("%lld: %.*s", ln, tp-lp, lp);
 			print();
 			lp = tp;
 		}
@@ -112,7 +112,13 @@ void next(){
 			return;
 		}
 		else if(tk == '='){ if(*tp == '='){tk = Eq; tp++; return;} else{tk = Assign; return;}}
+		else if(tk == '!'){ if(*tp == '='){tk = Ne; tp++; return;} }//TODO: Exclamation mark?
 		else if(tk == '+'){ if(*tp == '+'){tk = Inc; tp++; return;} else{tk = Add; return;}}
+		else if(tk == '*'){ tk = Mul; return;}
+		else if(tk == '/'){ tk = Div; return;}
+		else if(tk == '&'){ if(*tp == '&'){tk = Lan; tp++; return;} else{tk = And; return;}}
+		else if(tk == '>'){ if(*tp == '='){tk = Ge; tp++; return;} else{tk = Gt; return;}}
+		else if(tk == '<'){ if(*tp == '='){tk = Le; tp++; return;} else{tk = Lt; return;}}
 	}
 }
 
@@ -125,10 +131,9 @@ void check(int expr, char *errmsg){
 }
 
 void stmt(){ //tk is at start
-	//TODO: Check where expr ends after writing it: expr + next needed?
 	int *addr1, *addr2;
 	//Have stmt take care of { and } for easy recursion
-	check(tk != If && tk != Else && tk != While && tk != Return && tk != ';' && tk != '{' && tk != '}' && tk != Id, "Bad Statement: Expecting keyword/;"); 
+	//check(tk != If && tk != Else && tk != While && tk != Return && tk != ';' && tk != '{' && tk != '}' && tk != Id && tk != Mul, "Bad Statement: Expecting keyword/;"); 
 	if(tk == ';'){
 		next();
 		return;
@@ -142,20 +147,19 @@ void stmt(){ //tk is at start
 		return;
 	}
 	if(tk == If){
-		*cmd++ = BZ;
 		next();
 		check(tk != '(',"Bad Statement: Missing (");
 		next();
-
-		expr(0);
+		expr(Assign); //Evaluate inside first
+		*cmd++ = BZ;
 		addr1 = cmd++;
 		check(tk != ')',"Bad Statement: Missing )");
 		next();
 
 		stmt(); //Deal with brackets
-		*addr1 = (int)cmd; //TODO:
+		*addr1 = (int)cmd; //TODO: BZ Prints with address 0
 		if(tk == Else){ //if(..){} else
-			*addr1 = (int)(cmd + 3); //3 down -> addr -> JMP -> LOC -> ...
+			*addr1 = (int)(cmd + 2); //3 down -> addr -> JMP -> LOC -> ...
 			*cmd++ = JMP;
 			addr1 = cmd++;
 			next();
@@ -163,25 +167,29 @@ void stmt(){ //tk is at start
 			*addr1 = (int)cmd;
 		}
 	}
+	//TODO: While with <, > <= >= 
 	if(tk == While){
-		addr1 = cmd;
-		*cmd++ = BZ;
-		cmd++;	//leave space for address
+		
+		addr1 = cmd; 
+
 		next();
 		check(tk != '(',"Bad Statement: Missing (");
 		next();
-		expr(0);
+		expr(Assign);
 		check(tk != ')',"Bad Statement: Missing )");
 		next();
-		stmt();
-		addr2 = cmd;
-		*cmd++ = JMP;
-		*cmd++ = (int)addr1++;
-		*addr1 = (int)cmd;
 
+		*cmd++ = BZ;
+		addr2 = cmd; //BZ x
+		cmd++;	//leave space for address
+
+		stmt();
+		*cmd++ = JMP; // BZ x ... JMP
+		*cmd++ = (int)addr1; // BZ x ... JMP x 
+		*addr2 = (int)cmd; //
 	}
 	if(tk == Return){
-		printf("Return!\n");
+		next();
 		expr(Assign);
 	}
 	else{
@@ -192,14 +200,15 @@ void stmt(){ //tk is at start
 //Notes:
 //-------------------------------------------
 //expr Will NEVER parse ; by itself: Done by stmt
-//ANY Num, Str, Id etc. DOESNT call PSH by itself: BC it doesn't know
+//ANY Num, Str, Id etc. DOESNT call PSH by itself: BC it has no context
 void expr(int lvl){ //tk is at start
-	if(tk == Num || tk == Str){
+	if(tk == Num || tk == Str){ //LEAF
 		next();
 		*cmd++ = IMM;
 		*cmd++ = val;
 	}
-	else if(tk == Id){
+	else if(tk == Id){//DOESNT CALL EXPR BY ITSELF: LEAF
+		check(!tab[addr].Class,"Undefined Variable");
 		next(); //ID can't be followed by another ID: Addr won't move
 		//TODO
 		if(tab[addr].Class == Sys){
@@ -242,22 +251,39 @@ void expr(int lvl){ //tk is at start
 		}
 		else if(tab[addr].Class == Loc){
 			*cmd++ = LEA;
+			//TODO: How was this if/else one statement?
 			if(tab[addr].Value < parmc) //if parameter
 				*cmd++ = 1 + parmc - tab[addr].Value;
 			else
 				*cmd++ = parmc - 1 - tab[addr].Value;
 			*cmd++ = LI;
 		}
-		else if(tab[addr].Class == Glo){
+		else if(tab[addr].Class == Glo){ //Global variables are ALWAYS taken in as a value, unless otherwise changed (i.e. assign)
 			*cmd++ = IMM;
 			*cmd++ = tab[addr].Value; 
+			*cmd++ = LI;
 		}
 	}
+	else if(tk == Mul){ //NEVER Runs operations. If hit, will always be pointer, and ONLY through recursion.
+		next();
+		expr(Mul+1);
+		check(tab[addr].Type < Int, "Bad Variable: Expected Pointer");
+		if(tab[addr].Type - Ptr == Int) //Just need to find right type
+			*cmd++ = LI;
+		else
+			*cmd++ = LC;
+	}
+	else if(tk == And){ 
+		next();
+		expr(And+1);//Should deal with ID
+		cmd--;//Just don't do LI
+		type += Ptr; //int *b; b = &a;
+	}
 
-	while(tk >= lvl){
+	while(tk >= lvl){ //Precedence Climbing Algorithm //Deal with order of operations
 		if(tk == Assign){
 			next();
-			if(tab[addr].Class == Loc)
+			if(*(cmd-1) == LI)
 				*(cmd-1) = PSH;
 			else
 				*cmd++ = PSH;
@@ -270,6 +296,54 @@ void expr(int lvl){ //tk is at start
 			expr(Add+1);
 			*cmd++ = ADD;
 		}
+		if(tk == Mul){
+			next();
+			*cmd++ = PSH; //fetch value of first term: a + b
+			expr(Mul+1);
+			*cmd++ = MUL;
+		}
+		if(tk == Div){
+			next();
+			*cmd++ = PSH; //fetch value of first term: a + b
+			expr(Div+1);
+			*cmd++ = DIV;
+		}
+		if(tk == Eq){
+			next();
+			*cmd++ = PSH; //fetch value of first term: a + b
+			expr(Eq+1);
+			*cmd++ = EQ;
+		}
+		if(tk == Ne){
+			next();
+			*cmd++ = PSH; //fetch value of first term: a + b
+			expr(Ne+1);
+			*cmd++ = NE;
+		}
+		if(tk == Le){
+			next();
+			*cmd++ = PSH; //fetch value of first term: a + b
+			expr(Le+1);
+			*cmd++ = LE;
+		}
+		if(tk == Ge){
+			next();
+			*cmd++ = PSH; //fetch value of first term: a + b
+			expr(Ge+1);
+			*cmd++ = GE;
+		}
+		if(tk == Gt){
+			next();
+			*cmd++ = PSH; //fetch value of first term: a + b
+			expr(Gt+1);
+			*cmd++ = GT;
+		}
+		if(tk == Lt){
+			next();
+			*cmd++ = PSH; //fetch value of first term: a + b
+			expr(Lt+1);
+			*cmd++ = LT;
+		}
 	}
 }
 
@@ -277,7 +351,11 @@ void glbl(){ //Deal with global variables and func decl.
 	check(tk != Int && tk != Char, "Bad Global Declaration: Missing Type");
 	type = tk;
 	next();
-	check(tk != Id, "Bad Global Declaration: Missing ID");
+	check(tk != Id && tk != Mul, "Bad Global Declaration: Missing ID/*");
+	while(tk == Mul){
+		type += Ptr;
+		next();
+	}
 	check(tab[addr].Class == Glo, "Bad Global Declaration: Duplicate");
 	next();
 	if(tk == ';'){
@@ -291,10 +369,15 @@ void glbl(){ //Deal with global variables and func decl.
 		tab[addr].Class = Glo;
 		tab[addr].Type  = type;
 		tab[addr].Value = (int)gdata;
-		gdata += sizeof(type);
+		gdata += sizeof(type); //TODO: type is always integer?
 		while(tk != ';'){  
 			next(); //a
-			check(tk != Id,"Bad Declaration: Missing ID");
+			check(tk != Id && tk != Mul, "Bad Global Declaration: Missing ID/*");
+			type = tk;
+			while(tk == Mul){
+				type += Ptr;
+				next();
+			}
 			tab[addr].Class = Glo;
 			tab[addr].Type  = type;
 			tab[addr].Value = (int)gdata;
@@ -351,7 +434,12 @@ void glbl(){ //Deal with global variables and func decl.
 			type = tk;
 			next();
 			while(tk != ';' && tk != 0){
-				check(tk != Id,"Bad Declaration: Missing ID");
+				check(tk != Id && tk != Mul, "Bad Global Declaration: Missing ID/*");
+				while(tk == Mul){
+					type += Ptr;
+					next();
+				}
+				
 				check(tab[addr].Class == Loc,"Bad Declaration: Duplicate");
 
 				if(!(tab[addr].Class)){ //If not filled out, fill out
@@ -402,7 +490,5 @@ void glbl(){ //Deal with global variables and func decl.
 			*cmd++ = EXIT;
 		else
 			*cmd++ = LEV;
-		//TODO
-		//if(
 	} 
 }

@@ -1,8 +1,11 @@
 #include <stdio.h>
-int d,e,f;
 int main(){
-	d = 3;
-	f = 4;
-	e = 5;
-	printf("hi %d %d %d",d,e,f);
+	int *a;
+	int b;	
+	b = 5;
+	a = &b;
+	while(*a < 8){
+		printf("%d",*a);
+		*a = *a + 1;
+	}
 }

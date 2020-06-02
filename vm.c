@@ -33,7 +33,6 @@ int *cnt; //count of command: used to print commands
 int *sp, *bp, *pc, *cmd, *sysc; //stack pointers, and machine code pointers
 int eax, inst; // eax register, inst = (pc -1)
 
-int addr1, addr2;
 //Actual text
 char *str; 
 char *sstr; //Start of string
@@ -62,7 +61,7 @@ int main(void){
 	str  = malloc(sizeof(char)*DATASZ);
 	gdata= malloc(sizeof(char)*DATASZ);
 	bp = sp = malloc(sizeof(int)*DATASZ);
-	pc = cmd= malloc(sizeof(int)*DATASZ);
+	cmd= malloc(sizeof(int)*DATASZ);
 
 	if ((fd = open("code.c", 0)) < 0) { printf("cannot open code file.\n"); return -1; }
 	if ((read(fd, str, DATASZ)) <= 0) { printf("cannot read code file.\n"); return -1; }
@@ -74,9 +73,11 @@ int main(void){
 	next();
 	while(tk) //While have token
 		glbl();
-	*cmd++ = EXIT;
 	print();
-	check(mainaddr<0,"No Main Function.");
+
+	check(mainaddr < 0,"No Main Function.");
+
+	pc = tab[mainaddr].Value;
 
 	while(1){ //Infinitely Run commands till finish
 		//printf("before exec:pc %llx *pc %llx bp %llx eax:%d *sp: %llx sp %llx \n", pc, *pc, bp, eax, *sp, sp);	
@@ -100,14 +101,19 @@ int main(void){
 		else if(inst == BNZ ){eax = *(int *)eax;}
 		else if(inst == ADJ){sp = sp + *pc; pc++;} //Move sp back over parameters
 
-		//TODO: Figure out how to remove *(int *) casting
-		else if(inst == PRTF){sysc = sp + pc[1]; printf((char*)sysc[-1], *(int *)sysc[-2], *(int *)sysc[-3], *(int *)sysc[-4]); printf("\n");} // Print out eax pc[1] = x: PRFT -> ADJ x
+		else if(inst == PRTF){sysc = sp + pc[1]; printf((char*)sysc[-1], sysc[-2], sysc[-3], sysc[-4]); printf("\n");} // Print out eax pc[1] = x: PRFT -> ADJ x
 
 		//expr
 		else if(inst == ADD){eax = *sp++ + eax;}
 		else if(inst == SUB){eax = eax - *sp++;}
 		else if(inst == MUL){eax = eax * *sp++;}
 		else if(inst == DIV){eax = eax / *sp++;}
+		else if(inst == EQ) {eax = *sp++ == eax;}
+		else if(inst == NE) {eax = *sp++ != eax;}
+		else if(inst == GE) {eax = *sp++ >= eax;}
+		else if(inst == LE) {eax = *sp++ <= eax;}
+		else if(inst == GT) {eax = *sp++ > eax;}
+		else if(inst == LT) {eax = *sp++ < eax;}
 
 		//printf("%.4s",
 		//		&"LEA ,IMM ,JMP ,JSR ,BZ  ,BNZ ,ENT ,ADJ ,LEV ,LI  ,LC  ,SI  ,SC  ,PSH ,"
