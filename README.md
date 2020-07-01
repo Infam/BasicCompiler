@@ -52,7 +52,7 @@ Contains both the lexer and parser portion of the compiler.
 **print():**
 
 Prints out the lines in code.c and the associated assembly code generated.  
-Note that BZ doesn't display the address correctly both in mine and rswier's versions, since it is printed out before the address is actually changed.  
+Note that BZ doesn't display the address correctly both in mine and rswier's versions, since it is printed out before the address is actually changed.
 
 **next():**
 
@@ -62,7 +62,7 @@ Also notes the location of the main function
 
 **check(int expr, char \*errmsg):**
 
-checks incoming statement and stops compiler if wrong. Used to simplify reading code.
+Checks incoming statement and stops compiler if wrong. Used to simplify reading code.
 
 **stmt():**
 
@@ -79,9 +79,10 @@ Figures out everything global. Since everything must start as global, this is th
 ### vm.c
 
 Contains the virtual machine and all necessary variables
+
 **main():**
 
-> Contains the main function, which endlessly runs a while loop and exits when it sees the EXIT instruction.
+Contains the main function, which endlessly runs a while loop and exits when it sees the EXIT instruction.
 
 ### compiler.h
 
@@ -94,22 +95,26 @@ All the functions have a return type of void, because they never need to pass va
 
 # Simplifications
 
-> x86 Instructions are simplified, combined, or just removed  
-> No Void Type (As of 6/29/2020)  
-> No in-line assignment (int a = 3; -> int a; a = 3;)  
-> Only simulate one register (eax)
+- x86 Instructions are simplified, combined, or just removed  
+- No Void Type (As of 6/29/2020)  
+- No in-line assignment (int a = 3; -> int a; a = 3;)  
+- Only simulate one register (eax)  
 
 # Basic Logic
 
 The order these functions are executed is always Globals -> Statements -> Expressions.  
-**Globals:**
+
+## Globals
+
 Globals are any code that runs are located in the outermost scope of a C file.
 
-> include/define:
->
-> > Skipped over, out of focus of learning the basics of the compiler  
-> > //comments:
-> > Skipped over, as they should be
+**include/define:**
+
+- Skipped over, out of focus of learning the basics of the compiler  
+
+**//comments:**
+
+Skipped over, as they should be
 
 > Global Variables:
 
