@@ -7,9 +7,15 @@
 #include <unistd.h>
 #include "compiler.h"
 
-//TODO: Printf
-//TODO: Set up Main func
-//TODO: Set up gdata location
+//TODO: Void Type;
+//TODO: int a = 3;
+//TODO: char support;
+//TODO: pointers in function parameters;
+//TODO: check pointer referencing;
+//            MORE POINTERS THAN POSSIBLE?;
+//TODO: delete local variables when leaving scope?;
+//TODO: function pointers?;
+//TODO: &(*a)
 
 
 //Get next useful token
@@ -250,6 +256,8 @@ void expr(int lvl){ //tk is at start
 			next();
 		}
 		else if(tab[addr].Class == Loc){
+			//Local variables are always stored relatively to the stack.
+			//Since it only stays in the stack for its lifetime, it only uses integer values relative to bp and sp location.
 			*cmd++ = LEA;
 			//TODO: How was this if/else one statement?
 			if(tab[addr].Value < parmc) //if parameter
@@ -264,20 +272,23 @@ void expr(int lvl){ //tk is at start
 			*cmd++ = LI;
 		}
 	}
-	else if(tk == Mul){ //NEVER Runs operations. If hit, will always be pointer, and ONLY through recursion.
-		next();
-		expr(Mul+1);
+	else if(tk == Mul){ //NEVER Runs operations. If hit, will always be pointer.
+		int deref = 0; //number of dereferences
+		while(tk == Mul){
+			next();
+			deref++;
+		} //now found the original	
+		expr(Mul+1); //let expr handle id
 		check(tab[addr].Type < Int, "Bad Variable: Expected Pointer");
-		if(tab[addr].Type - Ptr == Int) //Just need to find right type
-			*cmd++ = LI;
+		if(tab[addr].Type - Ptr*deref >= Int) // if >, then is pointer, use LI
+			while(deref > 0){*cmd++ = LI; deref--;}
 		else
-			*cmd++ = LC;
+			while(deref > 0){*cmd++ = LC; deref--;}
 	}
 	else if(tk == And){ 
 		next();
 		expr(And+1);//Should deal with ID
 		cmd--;//Just don't do LI
-		type += Ptr; //int *b; b = &a;
 	}
 
 	while(tk >= lvl){ //Precedence Climbing Algorithm //Deal with order of operations
@@ -290,55 +301,55 @@ void expr(int lvl){ //tk is at start
 			expr(Assign+1);
 			*cmd++ = SI;
 		}
-		if(tk == Add){
+		else if(tk == Add){
 			next();
 			*cmd++ = PSH; //fetch value of first term: a + b
 			expr(Add+1);
 			*cmd++ = ADD;
 		}
-		if(tk == Mul){
+		else if(tk == Mul){
 			next();
 			*cmd++ = PSH; //fetch value of first term: a + b
 			expr(Mul+1);
 			*cmd++ = MUL;
 		}
-		if(tk == Div){
+		else if(tk == Div){
 			next();
 			*cmd++ = PSH; //fetch value of first term: a + b
 			expr(Div+1);
 			*cmd++ = DIV;
 		}
-		if(tk == Eq){
+		else if(tk == Eq){
 			next();
 			*cmd++ = PSH; //fetch value of first term: a + b
 			expr(Eq+1);
 			*cmd++ = EQ;
 		}
-		if(tk == Ne){
+		else if(tk == Ne){
 			next();
 			*cmd++ = PSH; //fetch value of first term: a + b
 			expr(Ne+1);
 			*cmd++ = NE;
 		}
-		if(tk == Le){
+		else if(tk == Le){
 			next();
 			*cmd++ = PSH; //fetch value of first term: a + b
 			expr(Le+1);
 			*cmd++ = LE;
 		}
-		if(tk == Ge){
+		else if(tk == Ge){
 			next();
 			*cmd++ = PSH; //fetch value of first term: a + b
 			expr(Ge+1);
 			*cmd++ = GE;
 		}
-		if(tk == Gt){
+		else if(tk == Gt){
 			next();
 			*cmd++ = PSH; //fetch value of first term: a + b
 			expr(Gt+1);
 			*cmd++ = GT;
 		}
-		if(tk == Lt){
+		else if(tk == Lt){
 			next();
 			*cmd++ = PSH; //fetch value of first term: a + b
 			expr(Lt+1);
@@ -445,7 +456,7 @@ void glbl(){ //Deal with global variables and func decl.
 				if(!(tab[addr].Class)){ //If not filled out, fill out
 					tab[addr].Type  = type;
 					tab[addr].Class = Loc;
-					tab[addr].Value = varc;
+					tab[addr].Value = varc; //Location in stack
 				}
 				else{ //Then there is a global variable w/ same name
 

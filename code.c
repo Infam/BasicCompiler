@@ -1,11 +1,15 @@
 #include <stdio.h>
+int g(int a){
+	return a + 3;	
+}
+
+int f(int x){
+	return x*3;
+}
 int main(){
-	int *a;
-	int b;	
-	b = 5;
-	a = &b;
-	while(*a < 8){
-		printf("%d",*a);
-		*a = *a + 1;
-	}
+	int b;
+	b = 0;
+	b = g(b);
+	b = f(b);
+	printf("%d",b);
 }

@@ -23,7 +23,6 @@ struct table tab[DATASZ] = {
 // File
 int fd;
 
-
 // Debug
 char *lp; //Line Pointer
 int ln = 0; //Line Pointer
@@ -50,9 +49,6 @@ int varc; //Local Variable Counter
 
 char * gdata; //Global data area & strings
 
-//Combos:
-//PRTF -> ADJ x
-//ENT x -> ... -> LEV -> ADJ x
 int main(void){
 
 
@@ -80,7 +76,6 @@ int main(void){
 	pc = tab[mainaddr].Value;
 
 	while(1){ //Infinitely Run commands till finish
-		//printf("before exec:pc %llx *pc %llx bp %llx eax:%d *sp: %llx sp %llx \n", pc, *pc, bp, eax, *sp, sp);	
 		inst = *pc++;
 		//define:
 		//IF TAKE PARAM: pc++;
@@ -89,16 +84,16 @@ int main(void){
 		// inst  pc  pc+1
 		if(inst == ENT){*--sp = (int)bp; bp = sp; sp = sp - *pc; pc++;} 
 		else if(inst == LEV){sp = bp; bp = (int *)*sp++; pc = (int *)*sp++;}
-		else if(inst == LEA){eax = (int)(bp + *pc++);}
+		else if(inst == LEA){eax = (int)(bp + *pc++);} //gets address using address +- offset
 		else if(inst == IMM){eax = *pc; pc++;}
-		else if(inst == PSH){*--sp = eax;}
-		else if(inst == LI ){eax = *(int *)eax;}
+		else if(inst == PSH){*--sp = eax;} //push value to stack and move
+		else if(inst == LI ){eax = *(int *)eax;} // Cast eax to pointer type in order to get its contents
 		else if(inst == SI ){*(int *)*sp++ = eax;}
 
 		else if(inst == JMP){pc = (int *)*pc;} //pc and not pc++ since NO NEED TO MOVE
 		else if(inst == JSR){*--sp = (int)(pc + 1); pc = (int *)*pc;} //Changing frames, PSH pc and JMP
 		else if(inst == BZ ){if(eax){pc = pc + 1;}else{pc = (int *)*pc;}} // Jump if false, walk if true
-		else if(inst == BNZ ){eax = *(int *)eax;}
+		else if(inst == BNZ ){if(!eax){pc = pc + 1;}else{pc = (int *)*pc;}} // Jump if false, walk if true
 		else if(inst == ADJ){sp = sp + *pc; pc++;} //Move sp back over parameters
 
 		else if(inst == PRTF){sysc = sp + pc[1]; printf((char*)sysc[-1], sysc[-2], sysc[-3], sysc[-4]); printf("\n");} // Print out eax pc[1] = x: PRFT -> ADJ x
@@ -114,14 +109,6 @@ int main(void){
 		else if(inst == LE) {eax = *sp++ <= eax;}
 		else if(inst == GT) {eax = *sp++ > eax;}
 		else if(inst == LT) {eax = *sp++ < eax;}
-
-		//printf("%.4s",
-		//		&"LEA ,IMM ,JMP ,JSR ,BZ  ,BNZ ,ENT ,ADJ ,LEV ,LI  ,LC  ,SI  ,SC  ,PSH ,"
-		//		"OR  ,XOR ,AND ,EQ  ,NE  ,LT  ,GT  ,LE  ,GE  ,SHL ,SHR ,ADD ,SUB ,MUL ,DIV ,MOD ,"
-		//		"OPEN,READ,CLOS,PRTF,MALC,FREE,MSET,MCMP,EXIT,"[inst * 5]);
-		//printf("\n");
-		//for(int i=0; i<10; i++) printf(" %llx ", *(bp-i));
-		//printf("\n");
 
 		if(inst == EXIT){return 0;}
 
