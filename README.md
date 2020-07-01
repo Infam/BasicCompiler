@@ -34,7 +34,7 @@ This includes storing variables and eventually figuring out the actual machine i
 
 It is the parser's job to fill out the symbol table (tab[]) and list of commands (cmd), as well as populate the data section (gdata).
 
-## Virtual Machine
+## Virtual Machine (vm.c)
 
 Processes the machine instructions/ runs the code.
 
@@ -84,7 +84,7 @@ Contains the virtual machine and all necessary variables
 
 Contains the main function, which endlessly runs a while loop and exits when it sees the EXIT instruction.
 
-### compiler.h {: #compilerh}
+### compiler.h
 
 Contains all variables used by both parser.c and vm.c.
 
@@ -100,7 +100,7 @@ All the functions have a return type of void, because they never need to pass va
 - No in-line assignment (int a = 3; -> int a; a = 3;)
 - Only simulate one register (eax)
 
-# Basic Logic {: #basic-logic}
+# Basic Logic
 
 The order these functions are executed is always Globals -> Statements -> Expressions.
 
@@ -173,16 +173,19 @@ expr() always ends with a while loop that is run every time it is entered. This 
 
 ***expr() uses LR parsing which translates the expression into Reverse Polish Notation through post-order traversal.***  
 Post-order traversal (Left Right Root) is achieved through the layout of the function as follows:
+
+```
     expr(int lvl):
-        Leaves
-        while (tk >= lvl):
-            if tk = ... :
-                expr(tk + 1)
-                Nodes
-    
+	Leaves
+	while (tk >= lvl):
+	    if tk = ... :
+		expr(tk + 1)
+		Nodes
+```
+
 Leaves are always added as soon as expr is entered, while Nodes are only touched when a loop has finished. In other words the left and right are visited first before the root, which is post-order traversal.  
 Calculations are only done once we have reached a point where the following operation is of a lower level than our current. We then roll back and calculate until the level is lower than that if the following operation. (See [Expression Example](#expression-example))  
-Logical operators also have a place in the heirarchy. (See [compiler.h](#compilerh))  
+Logical operators also have a place in the heirarchy. (See [compiler.h](#compilerh))
 
 # Variables
 
@@ -190,143 +193,162 @@ Logical operators also have a place in the heirarchy. (See [compiler.h](#compile
 Local variables are stored in the symbol table which holds their Tktype(id, system call), Type(int, char), Name(actual string), Class(Loc, Glo), and Value(offset/variable count (varc)).  
 Depending on their Value, a function can determine whether or not it is a parameter, as parameters will be above the return points, whereas actual local variables will be below.  
 Since local variables are only alive as long as the function's scope doesn't increase (i.e. don't return), they are stored in the stack.  
-They can therefore be accessed using a calculted offset, instead of their actual memory address (See [LEA/Patterns](#patterns)).  
+They can therefore be accessed using a calculted offset, instead of their actual memory address (See [LEA/Patterns](#patterns)).
 
 **Global:**
-Global variables are stored similarly to local variables, but their value is the address in the data section of process (gdata) instead of an offset. (See [Patterns](#patterns))  
+Global variables are stored similarly to local variables, but their value is the address in the data section of process (gdata) instead of an offset. (See [Patterns](#patterns))
 
 **Duplicates/Shadowing:**
-If an id is used globally and also locally, the global declaration is moved to gblType, gblClass, gblValue and the local is put in its place. Once the scope exits the function, then everything is moved back. Since the symbol table is searched through and not pointed to, moving items around doesn't create any issues.  
+If an id is used globally and also locally, the global declaration is moved to gblType, gblClass, gblValue and the local is put in its place. Once the scope exits the function, then everything is moved back. Since the symbol table is searched through and not pointed to, moving items around doesn't create any issues.
 
 # Pointers
 
 Pointers are sort of special so I wanted to give them their own section.  
-Only the most basic implementation of pointers is handled here (i.e. setting and getting values).  
+Only the most basic implementation of pointers is handled here (i.e. setting and getting values).
 
 ### Notes
 
-Just some basic notes, since I find pointers confusing.  
+Just some basic notes, since I find pointers confusing.
 
 **Single Pointers:**
 
-- if `a` is declared as `int *a`:  
-- `a`, which is of type `int *`, will be the address that it points to  
-- `*a`, which is of type `int * - * = int`, will be the contents pointed to   
-- `&a`, which is of type `int * + * = int **`, will be the address of the pointer itself.  
+- if `a` is declared as `int *a`:
+- `a`, which is of type `int *`, will be the address that it points to
+- `*a`, which is of type `int * - * = int`, will be the contents pointed to
+- `&a`, which is of type `int * + * = int **`, will be the address of the pointer itself.
 
 **Addresses:**
 
-- From the example above, adding an `&` creates another level of indirection and is the same as increasing the type by a `*`.  
-- `&` always gives you the address of the thing itself. So `&&a` is not a thing (thankfully).  
+- From the example above, adding an `&` creates another level of indirection and is the same as increasing the type by a `*`.
+- `&` always gives you the address of the thing itself. So `&&a` is not a thing (thankfully).
 
 **Assignments:**
-***Since assigning does never has a *, it is treated as an id assignment. Assigning will never have any *'s, as that is assigning to what a pointer points to, which at the beginning is junk. Pointers therefore must be assigned before being used:***  
+***Since assigning never has a*** `*` ***, it is treated as an id assignment. Assigning will never have any*** `*` ***'s, as that is assigning to what a pointer points to, which at the beginning is junk. Pointers therefore must be assigned before being used:***  
+
+```
     int *a; int b;  
-    *a = b  //a's type of int * - * = int and b's type of int + * = int * do match. The contents of what a points to is given the value of b, but a is pointing to junk that might not have write permissions or may be overwritten later. This usually results in a Segmentation Fault.  
+    *a = b //a's type of int * - * = int and b's type of int + * = int * do match. 
+           //The contents of what a points to is given the value of b, but a is pointing to junk that might not have write permissions or may be overwritten later. 
+	   //This usually results in a Segmentation Fault.  
     VS:  
-    a = &b; //a's type of int * and b's type of int + * = int * match. What a points to is correctly assigned the address of b. 
-    ***On top of this, *a would also correctly give the value of b.***  
-			
+    a = &b; //a's type of int * and b's type of int + * = int * match. 
+	    //What a points to is correctly assigned the address of b.
+```
+
+***On top of this, *a would also correctly give the value of b.***
+
 **Double Pointers:**
-				Just like with single pointers, every pointer must be assigned, and the types must be right. ***The compiler doesn't automatically assign two spaces for double pointers to point correctly.***  
-					int **a; int *b; int c;  
-					a = &b; //a's type of int ** matches &b's type of int * + *  
-					b = &c; //b's type of int * matches &c's type of int + *   
-					//*a is b  
-					//**a = *(b) is c  
+Just like with single pointers, every pointer must be assigned, and the types must be right.  
+***The compiler doesn't automatically assign two spaces for double pointers to point correctly.***  
+
+```
+    int **a; int \*b; int c;  
+    a = &b; //a's type of int ** matches &b's type of int * + *  
+    b = &c; //b's type of int * matches &c's type of int + *  
+    //*a is b  
+    //\*\*a = *(b) is c
+```
+
+**expr:**
+Since `*` is used both as a math operation and for pointers, expr() has the responsibility of differentiating between the two.  
+This is solved easily as every time expr() is entered, it should always start on a leaf, since every operation calls a next(). This means that if the token is a * when entering expr(), we know for sure that we are dealing with pointers.  
+Unless there is special notation (i.e. `*=`, which is handled as a unit), a multiplication operation always happens between two variables/numbers. Therefore the first multiplication symbol after an id must be a math operation.  
+Since expr() executes using this alteration between id's/numbers and operations (or leafs and nodes), expr() will always be able to tell if a `*` is associated with a pointer or not.
+
+**Calculation:**
+
+When declaring pointers, the number of indirections (number of stars) is noted by adding Ptr a similar number of times to the id's type.  
+By subtracting and adding Ptr's value we know how many indirections as well as the base type of the pointer. (See Pointer Calculation Example)  
+***Note that checking for pointer in expr() means I am processing/calculating the value.*** When using a pointer, I do not necessarily have to dereference all the way to the bottom.  
+
+- Assignments:
+    - Assignments don't need anything extra. since variables all have addresses we just need to fetch the address. (See [Patterns](#patterns))
+- Single Pointer: `*a`
+    - call expr() id portion, then run LI
+- Multiple Pointers: `**a`
+    - call expr() id portion, call LI for as many dereferences as there are.
+    - Calling LI after LEA gets the contents at the address in eax. By doing this multiple times we step through the pointers until we get to the right location.
+
+# Virtual Machine
+
+The machine allocates space for the following:  
+
+- Stack, which is pointed to/walked through by sp and bp  
+- gdata, Global data area, which is walked through just using gdata as a pointer  
+- cmd,  which is first added to by cmd as a pointer, and walked through by pc  
+- Text, which is pointed to/walked through by tp and tk  
   
-		expr:  
-	        	Since * is used both as a math operation and for pointers, expr() has the responsibility of differentiating between the two.  
-			This is solved easily as every time expr() is entered, it should always start on a leaf, since every operation calls a next(). This means that if the token is a * when entering expr(), we know for sure that we are dealing with pointers.  
-			Unless there is special notation (i.e. *=, which is handled as a unit), a multiplication operation always happens between two variables/numbers. Therefore the first multiplication symbol after an id must be a math operation.   
-			Since expr() executes using this alteration between id's/numbers and operations (or leafs and nodes), expr() will always be able to tell if a * is associated with a pointer or not.  
-		  
-		Calculation:  
-	        	When declaring pointers, the number of indirections (number of stars) is noted by adding Ptr a similar number of times to the id's type.  
-	        	By subtracting and adding Ptr's value we know how many indirections as well as the base type of the pointer. (See Pointer Calculation Example)  
-			***Note that checking for pointer in expr() means I am processing/calculating the value.*** When using a pointer, I do not necessarily have to dereference all the way to the bottom.  
-			Assignments:  
-				Assignments don't need anything extra. since variables all have addresses we just need to fetch the address. (See Patterns)  
-			Single Pointer: *a  
-				call expr() id portion, then run LI  
-			Multiple Pointers: **a  
-				call expr() id portion, call LI for as many dereferences as there are.  
-				Calling LI after LEA gets the contents at the address in eax. By doing this multiple times we step through the pointers until we get to the right location.  
+After parsing everything, the symbol table becomes irrelevant and the code gets ready to run.  
+pc is set to where the main function is called and starts walking through code  
+The virtual machine then runs all the commands and exits when it sees EXIT.  
+
+# Instructions
+
+Here is an explanation of the currently supported instructions.  
   
-  
-<h1>Virtual Machine:</h1>
-	The machine allocates space for the following:  
-		Stack, which is pointed to/walked through by sp and bp  
-		gdata, Global data area, which is walked through just using gdata as a pointer  
-		cmd,  which is first added to by cmd as a pointer, and walked through by pc  
-		Text, which is pointed to/walked through by tp and tk  
-  
-	After parsing everything, the symbol table becomes irrelevant and the code gets ready to run.  
-	pc is set to where the main function is called and starts walking through code  
-	The virtual machine then runs all the commands and exits when it sees EXIT.  
-  
-<h1>Instructions:</h1>
-	Here is an explanation of the currently supported instructions.  
-  
-	Scope Changing:  
-		These instructions deal with entering and leaving functions. Any instruction with round brackets takes two spaces.  
-		ENT(# params):  
-			Save the bp to the stack, so we know where to return to  
-			Move the sp to the same position  
-			Leave space for the number of parameters coming in  
-		JSR:  
-			Jump to Sub-Routine. Save pc and jump to new location.  
-		LEV:  
-			Move the sp back to bp  
-			Set bp back to the previous frame  
-			Place the pc back to where it used to be  
-	Fetching:  
-		LEA(variable offset):  
-			Load Effective Address.  
-			Loads the address of a variable into eax.  
-		IMM(value to load):  
-			Loads preceding value into eax.  
-		PSH:  
-			Places eax value into the stack.  
-		LI:  
-			Load integer. Loads integer value from address in eax.  
-		SI:  
-			Store Integer. Stores integer value to an address located in stack.  
-	Flow:   
-		JMP(address to jump to):  
-			Change pc to be the address that it's currently pointed to.  
-		BZ(address to jump to):  
-			Branch (if) Zero. If eax = 1, continue. Else, jump.  
-		BNZ(address to jump to):  
-			Branch (if) Not Zero. Opposite of BZ.	  
-		ADJ(Variable count):  
-			Adjust sp so it overrides parameters when calling functions.   
-		EXIT:  
-			Exits the whole program.  
-	System Calls:  
-		PRTF(Uses ADJ's count. See Patterns):  
-			Calls the actual printf() system call, with parameters in the stack.  
-   	Operations:   
-		ADD:   
-			+ value in stack and eax together. Put in Stack  
-		SUB:   
-			- value in stack and eax together. Put in Stack  
-		MUL:  
-			* value in stack and eax together. Put in Stack  
-		DIV:  
-			/ value in stack and eax together. Put in Stack  
-		EQ:   
-			Check if top of stack and eax are equal. Place 1 or 0 in eax.  
-		NE:   
-			Check if top of stack and eax are not equal. Place result in eax.  
-		GE:   
-			Check if top of stack is greater or equal to eax. Place result in eax.  
-		LE:   
-			Check if top of stack is less than or equal to eax. Place result in eax.  
-		GT:   
-			Check if top of stack is greater than eax. Place result in eax.  
-		LT:   
-			Check if top of stack is less than eax. Place result in eax.
+**Scope Changing:**
+These instructions deal with entering and leaving functions. Any instruction with round brackets takes two spaces.  
+
+- ENT(# params):  
+    - Save the bp to the stack, so we know where to return to  
+    - Move the sp to the same position  
+    - Leave space for the number of parameters coming in  
+- JSR:  
+    - Jump to Sub-Routine. Save pc and jump to new location.  
+- LEV:  
+    - Move the sp back to bp  
+    - Set bp back to the previous frame  
+    - Place the pc back to where it used to be  
+
+**Fetching:**
+
+- LEA(variable offset):  
+    - Load Effective Address.  
+    - Loads the address of a variable into eax.  
+- IMM(value to load):  
+    - Loads preceding value into eax.  
+- PSH:  
+    - Places eax value into the stack.  
+- LI:  
+    - Load integer. Loads integer value from address in eax.  
+- SI:  
+    - Store Integer. Stores integer value to an address located in stack.  
+
+**Flow:**
+- JMP(address to jump to):  
+    - Change pc to be the address that it's currently pointed to.  
+- BZ(address to jump to):  
+    - Branch (if) Zero. If eax = 1, continue. Else, jump.  
+- BNZ(address to jump to):  
+    - Branch (if) Not Zero. Opposite of BZ.	  
+- ADJ(Variable count):  
+    - Adjust sp so it overrides parameters when calling functions.   
+- EXIT:  
+    - Exits the whole program.  
+System Calls:  
+	PRTF(Uses ADJ's count. See Patterns):  
+		Calls the actual printf() system call, with parameters in the stack.  
+Operations:   
+	ADD:   
+		+ value in stack and eax together. Put in Stack  
+	SUB:   
+		- value in stack and eax together. Put in Stack  
+	MUL:  
+		* value in stack and eax together. Put in Stack  
+	DIV:  
+		/ value in stack and eax together. Put in Stack  
+	EQ:   
+		Check if top of stack and eax are equal. Place 1 or 0 in eax.  
+	NE:   
+		Check if top of stack and eax are not equal. Place result in eax.  
+	GE:   
+		Check if top of stack is greater or equal to eax. Place result in eax.  
+	LE:   
+		Check if top of stack is less than or equal to eax. Place result in eax.  
+	GT:   
+		Check if top of stack is greater than eax. Place result in eax.  
+	LT:   
+		Check if top of stack is less than eax. Place result in eax.
 
 # Patterns { : #patterns}
 
@@ -346,7 +368,6 @@ Just some basic notes, since I find pointers confusing.
     Leaving Function:
     	LEV -> ADJ (Entered param count)
     	Runs LEV to shift bp and pc, and ADJ to move sp.
-
 
 <h1>Pointer Calculation Example:</h1>
 	Declaration:  
