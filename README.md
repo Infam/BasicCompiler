@@ -8,7 +8,7 @@ While the majority of code was written by me to understand the logic, the genera
 The following is my understanding/documentation of how the compiler works.  
   
   
-Overview:  
+<h1>Overview:</h1> 
 	This C compiler is written primarily to understand how compilers work. This means there is a lot of simplification both in   
 	the amount of features covered and how instructions work/are processed.   
 	  
