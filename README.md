@@ -84,7 +84,7 @@ Contains the virtual machine and all necessary variables
 
 Contains the main function, which endlessly runs a while loop and exits when it sees the EXIT instruction.
 
-### compiler.h [compiler.h]
+### compiler.h
 
 Contains all variables used by both parser.c and vm.c.
 
@@ -149,14 +149,14 @@ Anything in brackets will recursively call stmt() (i.e. if(){}).
 ## Expressions
 
 Expressions use the Precedence Climbing Algorithm to ensure that operations are done in the right order.  
-Everytime expression is called it is given a level that corresponds to the order of operations enum table (see [compiler.h](#compiler.h)).  
+Everytime expression is called it is given a level that corresponds to the order of operations enum table (see [compiler.h](#compilerh)).  
 expr() always runs until the whole expression is calculated, and only then does the scope change back to stmt().  
 Entering expression always starts with the lowest level with the lowest integer value, Assign. Inside expr() it can recursively call itself with higher level values. This means that expr knows the previous expression that happened before it.
 
 expr() is logically set up to create a tree:
 
 **Leaves:**
-expr() always ends with a while loop that is run every time it is entered. This loop runs until the token scanned is smaller than the input level. Since expr always enters with Assign, the while loop only stops when tk < Assign, which is only when tk is a Num or Id. This logically makes those leaf nodes (see compiler.h enum)
+expr() always ends with a while loop that is run every time it is entered. This loop runs until the token scanned is smaller than the input level. Since expr always enters with Assign, the while loop only stops when tk < Assign, which is only when tk is a Num or Id. This logically makes those leaf nodes (see [compiler.h](compilerh))
 
 - Number:
   Used as direct value
@@ -185,7 +185,7 @@ Post-order traversal (Left Right Root) is achieved through the layout of the fun
 
 Leaves are always added as soon as expr is entered, while Nodes are only touched when a loop has finished. In other words the left and right are visited first before the root, which is post-order traversal.  
 Calculations are only done once we have reached a point where the following operation is of a lower level than our current. We then roll back and calculate until the level is lower than that if the following operation. (See [Expression Example](#expression-example))  
-Logical operators also have a place in the heirarchy. (See [compiler.h](#compiler.h))
+Logical operators also have a place in the heirarchy. (See [compiler.h](#compilerh))
 
 # Variables
 
@@ -572,7 +572,7 @@ First while loop still has tk = +. Since this is still greater than the lvl of A
 
 **4th expr:**
 
-Fourth expr will parse 5 and stop, since Id, or Num, are lower numbers in the enum. (see [compiler.h](#compiler.h))
+Fourth expr will parse 5 and stop, since Id, or Num, are lower numbers in the enum. (see [compiler.h](#compilerh))
 
 ```
     string: ;
