@@ -1,76 +1,75 @@
-A less versatile version of [rswier's c4 compiler](https://github.com/rswier/c4) written for educational purposes only.   
-I used rswier's code as a guide to learning the logic behind compilers and how they work.   
-After walking through a portion of rswier's code, I would try and write it by myself to solidify my understanding. Unlike rswier's code, much of mine is left commented   
+A less versatile version of [rswier's c4 compiler](https://github.com/rswier/c4) written for educational purposes only.  
+I used rswier's code as a guide to learning the logic behind compilers and how they work.  
+After walking through a portion of rswier's code, I would try and write it by myself to solidify my understanding. Unlike rswier's code, much of mine is left commented  
 in case I ever want to review or look back at it.  
-While the majority of code was written by me to understand the logic, the general layout, and print function were all done by rswier.  
-  
-  
-The following is my understanding/documentation of how the compiler works.  
-  
-  
-<h1>Overview:</h1> 
-	This C compiler is written primarily to understand how compilers work. This means there is a lot of simplification both in   
-	the amount of features covered and how instructions work/are processed.   
-	  
-	The basic layout can be thought of as the following layers:  
-		Lexer  
-		Reads in the code character by character and splits the code into basic units called tokens  
-		Parser  
-		I feel that parser is better explained as being made up of grammar and the actual parsing itself.  
-		However, these two are pretty much blended together when coding, since if a grammar rule is followed, we know how to process a pattern of tokens almost immediately.  
-		Grammar  
-		Just like in any language, establishes the rules around how words (in this case tokens) are placed.  
-		In this case we are writing grammar based on C's syntax rules.  
-		Uses the pattern of tokens to check whether the rules are followed or not.  
-		Actual Parsing  
-		If the rules are followed, we do certain actions based on the pattern of tokens.  
-		This includes storing variables and eventually figuring out the actual machine instructions/assembly code.  
-	  
-		It is the parser's job to fill out the symbol table (tab[]) and list of commands (cmd), as well as populate the data section (gdata).  
-		  
-		Virtual Machine  
-		Processes the machine instructions/ runs the code.  
-	  
-	This layout completely skips the assembly step of converting assembly code into machine code and opts to use a virtual machine for simplicity.  
-	Many of the instructions will also be different from typical x86 to simplify understanding by combining calls together, or are simply omitted altogether.  
-  
-	As of 6/29/2020 I have code oriented in the following fashion:  
-	parser.c:   
-		contains both the lexer and parser portion of the compiler.  
-		print():  
-			prints out the lines in code.c and the associated assembly code generated.  
-			Note that BZ doesn't display the address correctly both in mine and rswier's versions, since it is printed out before the address is actually changed.  
-		next():  
-			walks through code.c and returns the next useful token.  
-			Note that next stops at the first character of the next useful token.  
-			Also notes the location of the main function  
-		check(int expr, char *errmsg):  
-			checks incoming statement and stops compiler if wrong. Used to simplify reading code.  
-		stmt():  
-			Parses statements  
-		expr(int lvl):  
-			Parses expressions. Very special. (See Basic Logic)  
-		glbl():  
-			Figures out everything global. Since everything must start as global, this is the entry point of the parser.		  
-	vm.c:  
-		contains the virtual machine and all necessary variables  
-		main():  
-			Contains the main function, which endlessly runs a while loop and exits when it sees the EXIT instruction.  
-	compiler.h:  
-		contains all variables used by both parser.c and vm.c.  
-	code.c:  
-		the code that the compiler actually compiles  
-	  
-	All the functions have a return type of void, because they never need to pass values back to one another.  
-	  
-Simplifications:  
+While the majority of code was written by me to understand the logic, the general layout, and print function were all done by rswier.
+
+The following is my understanding/documentation of how the compiler works.
+
+<h1>Overview:</h1>
+
+    This C compiler is written primarily to understand how compilers work. This means there is a lot of simplification both in
+    the amount of features covered and how instructions work/are processed.
+
+    The basic layout can be thought of as the following layers:
+    	Lexer
+    	Reads in the code character by character and splits the code into basic units called tokens
+    	Parser
+    	I feel that parser is better explained as being made up of grammar and the actual parsing itself.
+    	However, these two are pretty much blended together when coding, since if a grammar rule is followed, we know how to process a pattern of tokens almost immediately.
+    	Grammar
+    	Just like in any language, establishes the rules around how words (in this case tokens) are placed.
+    	In this case we are writing grammar based on C's syntax rules.
+    	Uses the pattern of tokens to check whether the rules are followed or not.
+    	Actual Parsing
+    	If the rules are followed, we do certain actions based on the pattern of tokens.
+    	This includes storing variables and eventually figuring out the actual machine instructions/assembly code.
+
+    	It is the parser's job to fill out the symbol table (tab[]) and list of commands (cmd), as well as populate the data section (gdata).
+
+    	Virtual Machine
+    	Processes the machine instructions/ runs the code.
+
+    This layout completely skips the assembly step of converting assembly code into machine code and opts to use a virtual machine for simplicity.
+    Many of the instructions will also be different from typical x86 to simplify understanding by combining calls together, or are simply omitted altogether.
+
+    As of 6/29/2020 I have code oriented in the following fashion:
+    parser.c:
+    	contains both the lexer and parser portion of the compiler.
+    	print():
+    		prints out the lines in code.c and the associated assembly code generated.
+    		Note that BZ doesn't display the address correctly both in mine and rswier's versions, since it is printed out before the address is actually changed.
+    	next():
+    		walks through code.c and returns the next useful token.
+    		Note that next stops at the first character of the next useful token.
+    		Also notes the location of the main function
+    	check(int expr, char *errmsg):
+    		checks incoming statement and stops compiler if wrong. Used to simplify reading code.
+    	stmt():
+    		Parses statements
+    	expr(int lvl):
+    		Parses expressions. Very special. (See Basic Logic)
+    	glbl():
+    		Figures out everything global. Since everything must start as global, this is the entry point of the parser.
+    vm.c:
+    	contains the virtual machine and all necessary variables
+    	main():
+    		Contains the main function, which endlessly runs a while loop and exits when it sees the EXIT instruction.
+    compiler.h:
+    	contains all variables used by both parser.c and vm.c.
+    code.c:
+    	the code that the compiler actually compiles
+
+    All the functions have a return type of void, because they never need to pass values back to one another.
+
+<h1>Simplifications:</h1>
 	x86 Instructions are simplified, combined, or just removed  
 	No Void Type (As of 6/29/2020)  
 	No in-line assignment (int a = 3; -> int a; a = 3;)  
 	Only simulate one register (eax)  
   
   
-Basic Logic:  
+<h1>Basic Logic:</h1>
 	The order these functions are executed is always Globals -> Statements -> Expressions.  
 	Globals:  
 		Globals are any code that runs are located in the outermost scope of a C file.  
@@ -122,17 +121,18 @@ Basic Logic:
 	  
 		***expr() uses LR parsing which translates the expression into Reverse Polish Notation through post-order traversal.***  
 		Post-order traversal (Left Right Root) is achieved through the layout of the function as follows:  
-			expr(int lvl):  
+			`expr(int lvl):  
 				Leaves  
 				while (tk >= lvl):  
 					if tk = ... :  
 						expr(tk + 1)  
 						Nodes  
+			`
 		Leaves are always added as soon as expr is entered, while Nodes are only touched when a loop has finished. In other words the left and right are visited first before the root, which is post-order traversal.   
 		Calculations are only done once we have reached a point where the following operation is of a lower level than our current. We then roll back and calculate until the level is lower than that if the following operation. (See Expression Example)  
 		Logical operators also have a place in the heirarchy. (See compiler.h)  
   
-Variables:  
+<h1>Variables:</h1>
 	Local:  
 		Local variables are stored in the symbol table which holds their Tktype(id, system call), Type(int, char), Name(actual string), Class(Loc, Glo), and Value(offset/variable count (varc)).  
 		Depending on their Value, a function can determine whether or not it is a parameter, as parameters will be above the return points, whereas actual local variables will be below.  
@@ -189,7 +189,7 @@ Variables:
 				Calling LI after LEA gets the contents at the address in eax. By doing this multiple times we step through the pointers until we get to the right location.  
   
   
-Virtual Machine:  
+<h1>Virtual Machine:</h1>
 	The machine allocates space for the following:  
 		Stack, which is pointed to/walked through by sp and bp  
 		gdata, Global data area, which is walked through just using gdata as a pointer  
@@ -200,7 +200,7 @@ Virtual Machine:
 	pc is set to where the main function is called and starts walking through code  
 	The virtual machine then runs all the commands and exits when it sees EXIT.  
   
-Instructions:  
+<h1>Instructions:</h1>
 	Here is an explanation of the currently supported instructions.  
   
 	Scope Changing:  
@@ -263,7 +263,7 @@ Instructions:
 		LT:   
 			Check if top of stack is less than eax. Place result in eax.  
   
-Patterns:  
+<h1>Patterns:</h1>
 	These patterns are always followed regardless of how the code is written; The steps to enter a function are always the same, etc.  
 	Load Local Variable value:  
 		LEA (offset) -> LI   
@@ -281,11 +281,11 @@ Patterns:
 		LEV -> ADJ (Entered param count)  
 		Runs LEV to shift bp and pc, and ADJ to move sp.  
 	  
-Pointer Calculation Example:  
+<h1>Pointer Calculation Example:</h1>
 	Declaration:  
-		int **a; //a.Type = Int + Ptr + Ptr  
+		`int **a; //a.Type = Int + Ptr + Ptr  
 		int *b; //b.Type = Int + Ptr  
-		int c;  
+		int c;  `
 	Assignment:  
 		a = &b; //a's value in stack is given b's stack address (assuming local).   
 		b = &c; //b's value in stack is given c's stack address (assuming local).  
@@ -294,7 +294,7 @@ Pointer Calculation Example:
 		**a ...;  
 		type = a.Type - Ptr - Ptr = Int  
   
-Expression Example:  
+<h1>Expression Example:</h1>
 		For example, in the string 1 + 3 * 4 + 5; , Mul has a value of 162 and Add a value of 160.  
 		The tree would look like so:  
 		         +  
@@ -491,4 +491,4 @@ Expression Example:
 		+----------+  
 		|   ADD    |  
 		+----------+  
-		Since cmd is run from top to bottom, this would be run as 1 3 4 * + 5 +. This therefore confirms that the compiler uses LR parsing, as well as reverse polish notation.  
+		Since cmd is run from top to bottom, this would be run as 1 3 4 * + 5 +. This therefore confirms that the compiler uses LR parsing, as well as reverse polish notation.
