@@ -1,137 +1,164 @@
 A less versatile version of [rswier's c4 compiler](https://github.com/rswier/c4) written for educational purposes only.  
 I used rswier's code as a guide to learning the logic behind compilers and how they work.  
-After walking through a portion of rswier's code, I would try and write it by myself to solidify my understanding. Unlike rswier's code, much of mine is left commented  
-in case I ever want to review or look back at it.  
+After walking through a portion of rswier's code, I would try and write it by myself to solidify my understanding. Unlike rswier's code, much of mine is left commented in case I ever want to review or look back at it.
+
 While the majority of code was written by me to understand the logic, the general layout, and print function were all done by rswier.
 
 The following is my understanding/documentation of how the compiler works.
 
-<h1>Overview:</h1>
+# Overview
 
-    This C compiler is written primarily to understand how compilers work. This means there is a lot of simplification both in
-    the amount of features covered and how instructions work/are processed.
+This C compiler is written primarily to understand how compilers work. This means there is a lot of simplification both in the amount of features covered and how instructions work/are processed.
 
-    The basic layout can be thought of as the following layers:
-    	Lexer
-    	Reads in the code character by character and splits the code into basic units called tokens
-    	Parser
-    	I feel that parser is better explained as being made up of grammar and the actual parsing itself.
-    	However, these two are pretty much blended together when coding, since if a grammar rule is followed, we know how to process a pattern of tokens almost immediately.
-    	Grammar
-    	Just like in any language, establishes the rules around how words (in this case tokens) are placed.
-    	In this case we are writing grammar based on C's syntax rules.
-    	Uses the pattern of tokens to check whether the rules are followed or not.
-    	Actual Parsing
-    	If the rules are followed, we do certain actions based on the pattern of tokens.
-    	This includes storing variables and eventually figuring out the actual machine instructions/assembly code.
+The basic layout can be thought of as the following layers:
 
-    	It is the parser's job to fill out the symbol table (tab[]) and list of commands (cmd), as well as populate the data section (gdata).
+## Lexer
 
-    	Virtual Machine
-    	Processes the machine instructions/ runs the code.
+Reads in the code character by character and splits the code into basic units called tokens
 
-    This layout completely skips the assembly step of converting assembly code into machine code and opts to use a virtual machine for simplicity.
-    Many of the instructions will also be different from typical x86 to simplify understanding by combining calls together, or are simply omitted altogether.
+## Parser
 
-    As of 6/29/2020 I have code oriented in the following fashion:
-    parser.c:
-    	contains both the lexer and parser portion of the compiler.
-    	print():
-    		prints out the lines in code.c and the associated assembly code generated.
-    		Note that BZ doesn't display the address correctly both in mine and rswier's versions, since it is printed out before the address is actually changed.
-    	next():
-    		walks through code.c and returns the next useful token.
-    		Note that next stops at the first character of the next useful token.
-    		Also notes the location of the main function
-    	check(int expr, char *errmsg):
-    		checks incoming statement and stops compiler if wrong. Used to simplify reading code.
-    	stmt():
-    		Parses statements
-    	expr(int lvl):
-    		Parses expressions. Very special. (See Basic Logic)
-    	glbl():
-    		Figures out everything global. Since everything must start as global, this is the entry point of the parser.
-    vm.c:
-    	contains the virtual machine and all necessary variables
-    	main():
-    		Contains the main function, which endlessly runs a while loop and exits when it sees the EXIT instruction.
-    compiler.h:
-    	contains all variables used by both parser.c and vm.c.
-    code.c:
-    	the code that the compiler actually compiles
+I feel that parser is better explained as being made up of grammar and the actual parsing itself.
+However, these two are pretty much blended together when coding, since if a grammar rule is followed, we know how to process a pattern of tokens almost immediately.
 
-    All the functions have a return type of void, because they never need to pass values back to one another.
+## Grammar
 
-<h1>Simplifications:</h1>
-	x86 Instructions are simplified, combined, or just removed  
-	No Void Type (As of 6/29/2020)  
-	No in-line assignment (int a = 3; -> int a; a = 3;)  
-	Only simulate one register (eax)  
-  
-  
-<h1>Basic Logic:</h1>
-	The order these functions are executed is always Globals -> Statements -> Expressions.  
-	Globals:  
-		Globals are any code that runs are located in the outermost scope of a C file.  
-		#include:  
-			Skipped over, out of focus of learning the basics of the compiler  
-		//comments:  
-			Skipped over, as they should be  
-		Global Variables:  
-			added to symbol table  
-			(see Patterns)  
-		functions():  
-			added to symbol table  
-			Calls stmt() after {  
-			(see Patterns)  
-	Statements:   
-		Anything inside a function, but not an expression.  
-		Anything in brackets will recursively call stmt() (i.e. if(){}).  
-		Local Variables:  
-			added to symbol table  
-		if/else statment:  
-			Calls expr(int Assign) after (  
-			see Patterns  
-		while statement:  
-			Calls expr(int Assign) after (  
-			see Patterns  
-		return statement:  
-			Calls expr(int Assign) immediately  
-			see Patterns  
-	Expressions:  
-		Expressions utilize the Precedence Climbing Algorithm to ensure that operations are done in the right order.  
-		Everytime expression is called it is given a level that corresponds to the order of operations enum table (see compiler.h).  
-		expr() always runs until the whole expression is calculated, and only then does the scope change back to stmt().  
-		Entering expression always starts with the lowest level with the lowest integer value, Assign. Inside expr() it can recursively call itself with higher level values. This means that expr knows the previous expression that happened before it.  
-		expr() is logically set up to create a tree:  
-			Leaves:	  
-				expr() always ends with a while loop that is run every time it is entered. This loop runs until the token scanned is smaller than the input level. Since expr always enters with Assign, the while loop only stops when tk < Assign, which is only when tk is a Num or Id. This logically makes those leaf nodes (see compiler.h enum)  
-				Number:  
-					Used as direct value  
-				id/Pointers/Addresses:  
-					Parsed to get its value and get ready to use it. Can also be a system call. (See Variables)  
-				System Calls:  
-					System calls are keywords included in the symbol table. When hit, expr() loads all parameters into the stack. The real system call is then called with all the parameters loaded in.  
-  
-			Nodes:  
-				Operations:  
-					Add, Subtract, etc.  
-				Logical Operators:  
-					>, <, >=, ==  
-	  
-		***expr() uses LR parsing which translates the expression into Reverse Polish Notation through post-order traversal.***  
-		Post-order traversal (Left Right Root) is achieved through the layout of the function as follows:  
-			`expr(int lvl):  
-				Leaves  
-				while (tk >= lvl):  
-					if tk = ... :  
-						expr(tk + 1)  
-						Nodes  
-			`
-		Leaves are always added as soon as expr is entered, while Nodes are only touched when a loop has finished. In other words the left and right are visited first before the root, which is post-order traversal.   
-		Calculations are only done once we have reached a point where the following operation is of a lower level than our current. We then roll back and calculate until the level is lower than that if the following operation. (See Expression Example)  
-		Logical operators also have a place in the heirarchy. (See compiler.h)  
-  
+Just like in any language, establishes the rules around how words (in this case tokens) are placed.
+In this case we are writing grammar based on C's syntax rules.
+Uses the pattern of tokens to check whether the rules are followed or not.
+
+## Actual Parsing
+
+If the rules are followed, we do certain actions based on the pattern of tokens.
+This includes storing variables and eventually figuring out the actual machine instructions/assembly code.
+
+It is the parser's job to fill out the symbol table (tab[]) and list of commands (cmd), as well as populate the data section (gdata).
+
+## Virtual Machine
+
+Processes the machine instructions/ runs the code.
+
+# Layout
+
+This layout completely skips the assembly step of converting assembly code into machine code and opts to use a virtual machine for simplicity.
+Many of the instructions will also be different from typical x86 to simplify understanding by combining calls together, or are simply omitted altogether.
+
+As of 6/29/2020 I have code oriented in the following fashion:
+
+### parser.c
+
+Contains both the lexer and parser portion of the compiler.
+
+**print():**
+
+> Prints out the lines in code.c and the associated assembly code generated.
+> Note that BZ doesn't display the address correctly both in mine and rswier's versions, since it is printed out before the address is actually changed.
+> **next():**
+> walks through code.c and returns the next useful token.
+> Note that next stops at the first character of the next useful token.
+> Also notes the location of the main function
+> **check(int expr, char \*errmsg):**
+> checks incoming statement and stops compiler if wrong. Used to simplify reading code.
+> **stmt():**
+> Parses statements
+> **expr(int lvl):**
+> Parses expressions. Very special. (See Basic Logic)
+> **glbl():**
+> Figures out everything global. Since everything must start as global, this is the entry point of the parser.
+
+### vm.c
+
+Contains the virtual machine and all necessary variables
+**main():**
+
+> Contains the main function, which endlessly runs a while loop and exits when it sees the EXIT instruction.
+
+### compiler.h
+
+Contains all variables used by both parser.c and vm.c.
+
+### code.c
+
+The code that the compiler actually compiles.  
+All the functions have a return type of void, because they never need to pass values back to one another.
+
+# Simplifications
+
+> x86 Instructions are simplified, combined, or just removed  
+> No Void Type (As of 6/29/2020)  
+> No in-line assignment (int a = 3; -> int a; a = 3;)  
+> Only simulate one register (eax)
+
+# Basic Logic
+
+The order these functions are executed is always Globals -> Statements -> Expressions.  
+**Globals:**
+Globals are any code that runs are located in the outermost scope of a C file.
+
+> include/define:
+>
+> > Skipped over, out of focus of learning the basics of the compiler  
+> //comments:
+> > Skipped over, as they should be
+
+> Global Variables:
+
+    added to symbol table
+    (see Patterns)
+
+> functions():
+
+    added to symbol table
+    Calls stmt() after {
+    (see Patterns)
+    Statements:
+    	Anything inside a function, but not an expression.
+    	Anything in brackets will recursively call stmt() (i.e. if(){}).
+    	Local Variables:
+    		added to symbol table
+    	if/else statment:
+    		Calls expr(int Assign) after (
+    		see Patterns
+    	while statement:
+    		Calls expr(int Assign) after (
+    		see Patterns
+    	return statement:
+    		Calls expr(int Assign) immediately
+    		see Patterns
+    Expressions:
+    	Expressions utilize the Precedence Climbing Algorithm to ensure that operations are done in the right order.
+    	Everytime expression is called it is given a level that corresponds to the order of operations enum table (see compiler.h).
+    	expr() always runs until the whole expression is calculated, and only then does the scope change back to stmt().
+    	Entering expression always starts with the lowest level with the lowest integer value, Assign. Inside expr() it can recursively call itself with higher level values. This means that expr knows the previous expression that happened before it.
+    	expr() is logically set up to create a tree:
+    		Leaves:
+    			expr() always ends with a while loop that is run every time it is entered. This loop runs until the token scanned is smaller than the input level. Since expr always enters with Assign, the while loop only stops when tk < Assign, which is only when tk is a Num or Id. This logically makes those leaf nodes (see compiler.h enum)
+    			Number:
+    				Used as direct value
+    			id/Pointers/Addresses:
+    				Parsed to get its value and get ready to use it. Can also be a system call. (See Variables)
+    			System Calls:
+    				System calls are keywords included in the symbol table. When hit, expr() loads all parameters into the stack. The real system call is then called with all the parameters loaded in.
+
+    		Nodes:
+    			Operations:
+    				Add, Subtract, etc.
+    			Logical Operators:
+    				>, <, >=, ==
+
+    	***expr() uses LR parsing which translates the expression into Reverse Polish Notation through post-order traversal.***
+    	Post-order traversal (Left Right Root) is achieved through the layout of the function as follows:
+    		`expr(int lvl):
+    			Leaves
+    			while (tk >= lvl):
+    				if tk = ... :
+    					expr(tk + 1)
+    					Nodes
+    		`
+    	Leaves are always added as soon as expr is entered, while Nodes are only touched when a loop has finished. In other words the left and right are visited first before the root, which is post-order traversal.
+    	Calculations are only done once we have reached a point where the following operation is of a lower level than our current. We then roll back and calculate until the level is lower than that if the following operation. (See Expression Example)
+    	Logical operators also have a place in the heirarchy. (See compiler.h)
+
 <h1>Variables:</h1>
 	Local:  
 		Local variables are stored in the symbol table which holds their Tktype(id, system call), Type(int, char), Name(actual string), Class(Loc, Glo), and Value(offset/variable count (varc)).  
