@@ -70,7 +70,7 @@ Parses statements
 
 **expr(int lvl):**
 
-Parses expressions. Very special. (See Basic Logic)
+Parses expressions. Very special. (See [Basic Logic](basic-logic))
 
 **glbl():**
 
@@ -84,7 +84,7 @@ Contains the virtual machine and all necessary variables
 
 Contains the main function, which endlessly runs a while loop and exits when it sees the EXIT instruction.
 
-### compiler.h
+### compiler.h {: #compilerh}
 
 Contains all variables used by both parser.c and vm.c.
 
@@ -95,14 +95,14 @@ All the functions have a return type of void, because they never need to pass va
 
 # Simplifications
 
-- x86 Instructions are simplified, combined, or just removed  
-- No Void Type (As of 6/29/2020)  
-- No in-line assignment (int a = 3; -> int a; a = 3;)  
-- Only simulate one register (eax)  
+- x86 Instructions are simplified, combined, or just removed
+- No Void Type (As of 6/29/2020)
+- No in-line assignment (int a = 3; -> int a; a = 3;)
+- Only simulate one register (eax)
 
-# Basic Logic
+# Basic Logic {: #basic-logic}
 
-The order these functions are executed is always Globals -> Statements -> Expressions.  
+The order these functions are executed is always Globals -> Statements -> Expressions.
 
 ## Globals
 
@@ -110,52 +110,62 @@ Globals are any code that runs are located in the outermost scope of a C file.
 
 **include/define:**
 
-- Skipped over, out of focus of learning the basics of the compiler  
+- Skipped over, out of focus of learning the basics of the compiler
 
 **//comments:**
 
-Skipped over, as they should be
+- Skipped over, as they should be
 
-> Global Variables:
+**Global Variables:**
 
-    added to symbol table
-    (see Patterns)
+- added to symbol table (see [Patterns](patterns))
 
-> functions():
+**functions():**
 
-    added to symbol table
-    Calls stmt() after {
-    (see Patterns)
-    Statements:
-    	Anything inside a function, but not an expression.
-    	Anything in brackets will recursively call stmt() (i.e. if(){}).
-    	Local Variables:
-    		added to symbol table
-    	if/else statment:
-    		Calls expr(int Assign) after (
-    		see Patterns
-    	while statement:
-    		Calls expr(int Assign) after (
-    		see Patterns
-    	return statement:
-    		Calls expr(int Assign) immediately
-    		see Patterns
-    Expressions:
-    	Expressions utilize the Precedence Climbing Algorithm to ensure that operations are done in the right order.
-    	Everytime expression is called it is given a level that corresponds to the order of operations enum table (see compiler.h).
-    	expr() always runs until the whole expression is calculated, and only then does the scope change back to stmt().
-    	Entering expression always starts with the lowest level with the lowest integer value, Assign. Inside expr() it can recursively call itself with higher level values. This means that expr knows the previous expression that happened before it.
-    	expr() is logically set up to create a tree:
-    		Leaves:
-    			expr() always ends with a while loop that is run every time it is entered. This loop runs until the token scanned is smaller than the input level. Since expr always enters with Assign, the while loop only stops when tk < Assign, which is only when tk is a Num or Id. This logically makes those leaf nodes (see compiler.h enum)
-    			Number:
-    				Used as direct value
-    			id/Pointers/Addresses:
-    				Parsed to get its value and get ready to use it. Can also be a system call. (See Variables)
-    			System Calls:
-    				System calls are keywords included in the symbol table. When hit, expr() loads all parameters into the stack. The real system call is then called with all the parameters loaded in.
+- added to symbol table
+- Calls stmt() after **{** (see [Patterns](patterns))
 
-    		Nodes:
+## Statements
+
+Anything inside a function, but not an expression.  
+Anything in brackets will recursively call stmt() (i.e. if(){}).  
+
+**Local Variables:**
+
+- added to symbol table
+
+**if/else statment:**
+
+- Calls expr(int Assign) after **(** (see [Patterns](patterns))
+
+**while statement:**
+
+- Calls expr(int Assign) after **(** (see [Patterns](patterns))
+
+**return statement:**
+
+- Calls expr(int Assign) immediately (see [Patterns](patterns))
+
+## Expressions
+
+Expressions utilize the Precedence Climbing Algorithm to ensure that operations are done in the right order.  
+Everytime expression is called it is given a level that corresponds to the order of operations enum table (see [compiler.h](compilerh)).  
+expr() always runs until the whole expression is calculated, and only then does the scope change back to stmt().  
+Entering expression always starts with the lowest level with the lowest integer value, Assign. Inside expr() it can recursively call itself with higher level values. This means that expr knows the previous expression that happened before it.
+
+expr() is logically set up to create a tree:
+
+**Leaves:**
+expr() always ends with a while loop that is run every time it is entered. This loop runs until the token scanned is smaller than the input level. Since expr always enters with Assign, the while loop only stops when tk < Assign, which is only when tk is a Num or Id. This logically makes those leaf nodes (see compiler.h enum)
+
+- Number:
+    Used as direct value
+- id/Pointers/Addresses:
+    Parsed to get its value and get ready to use it. Can also be a system call. (See Variables)
+- System Calls:
+    System calls are keywords included in the symbol table. When hit, expr() loads all parameters into the stack. The real system call is then called with all the parameters loaded in.
+
+**Nodes:**
     			Operations:
     				Add, Subtract, etc.
     			Logical Operators:
@@ -304,8 +314,9 @@ Skipped over, as they should be
 			Check if top of stack is greater than eax. Place result in eax.  
 		LT:   
 			Check if top of stack is less than eax. Place result in eax.  
-  
-<h1>Patterns:</h1>
+
+# Patterns { : #patterns}
+
 	These patterns are always followed regardless of how the code is written; The steps to enter a function are always the same, etc.  
 	Load Local Variable value:  
 		LEA (offset) -> LI   
