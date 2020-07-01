@@ -51,20 +51,30 @@ Contains both the lexer and parser portion of the compiler.
 
 **print():**
 
-> Prints out the lines in code.c and the associated assembly code generated.
-> Note that BZ doesn't display the address correctly both in mine and rswier's versions, since it is printed out before the address is actually changed.
-> **next():**
-> walks through code.c and returns the next useful token.
-> Note that next stops at the first character of the next useful token.
-> Also notes the location of the main function
-> **check(int expr, char \*errmsg):**
-> checks incoming statement and stops compiler if wrong. Used to simplify reading code.
-> **stmt():**
-> Parses statements
-> **expr(int lvl):**
-> Parses expressions. Very special. (See Basic Logic)
-> **glbl():**
-> Figures out everything global. Since everything must start as global, this is the entry point of the parser.
+Prints out the lines in code.c and the associated assembly code generated.  
+Note that BZ doesn't display the address correctly both in mine and rswier's versions, since it is printed out before the address is actually changed.  
+
+**next():**
+
+Walks through code.c and returns the next useful token.
+Note that next stops at the first character of the next useful token.
+Also notes the location of the main function
+
+**check(int expr, char \*errmsg):**
+
+checks incoming statement and stops compiler if wrong. Used to simplify reading code.
+
+**stmt():**
+
+Parses statements
+
+**expr(int lvl):**
+
+Parses expressions. Very special. (See Basic Logic)
+
+**glbl():**
+
+Figures out everything global. Since everything must start as global, this is the entry point of the parser.
 
 ### vm.c
 
@@ -98,7 +108,7 @@ Globals are any code that runs are located in the outermost scope of a C file.
 > include/define:
 >
 > > Skipped over, out of focus of learning the basics of the compiler  
-> //comments:
+> > //comments:
 > > Skipped over, as they should be
 
 > Global Variables:
