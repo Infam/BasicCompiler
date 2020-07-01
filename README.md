@@ -149,7 +149,7 @@ Anything in brackets will recursively call stmt() (i.e. if(){}).
 ## Expressions
 
 Expressions use the Precedence Climbing Algorithm to ensure that operations are done in the right order.  
-Everytime expression is called it is given a level that corresponds to the order of operations enum table (see [compiler.h](#compilerh)).  
+Everytime expression is called it is given a level that corresponds to the order of operations enum table (see [compiler.h](#compiler.h)).  
 expr() always runs until the whole expression is calculated, and only then does the scope change back to stmt().  
 Entering expression always starts with the lowest level with the lowest integer value, Assign. Inside expr() it can recursively call itself with higher level values. This means that expr knows the previous expression that happened before it.
 
@@ -171,7 +171,7 @@ expr() always ends with a while loop that is run every time it is entered. This 
   Add, Subtract, etc.
 - Logical Operators: >, <, >=, ==
 
-***expr() uses LR parsing which translates the expression into Reverse Polish Notation through post-order traversal.***  
+**_expr() uses LR parsing which translates the expression into Reverse Polish Notation through post-order traversal._**  
 Post-order traversal (Left Right Root) is achieved through the layout of the function as follows:
 
 ```
@@ -185,7 +185,7 @@ Post-order traversal (Left Right Root) is achieved through the layout of the fun
 
 Leaves are always added as soon as expr is entered, while Nodes are only touched when a loop has finished. In other words the left and right are visited first before the root, which is post-order traversal.  
 Calculations are only done once we have reached a point where the following operation is of a lower level than our current. We then roll back and calculate until the level is lower than that if the following operation. (See [Expression Example](#expression-example))  
-Logical operators also have a place in the heirarchy. (See [compiler.h](#compilerh))
+Logical operators also have a place in the heirarchy. (See [compiler.h](#compiler.h))
 
 # Variables
 
@@ -223,360 +223,432 @@ Just some basic notes, since I find pointers confusing.
 - `&` always gives you the address of the thing itself. So `&&a` is not a thing (thankfully).
 
 **Assignments:**
-***Since assigning never has a*** `*` ***, it is treated as an id assignment. Assigning will never have any*** `*` ***'s, as that is assigning to what a pointer points to, which at the beginning is junk. Pointers therefore must be assigned before being used:***  
+
+**_Since assigning never has a_** `*` **_, it is treated as an id assignment. Assigning will never have any_** `*` **_'s, as that is assigning to what a pointer points to, which at the beginning is junk. Pointers therefore must be assigned before being used:_**
 
 ```
-    int *a; int b;  
-    *a = b //a's type of int * - * = int and b's type of int + * = int * do match. 
-           //The contents of what a points to is given the value of b, but a is pointing to junk that might not have write permissions or may be overwritten later. 
-	   //This usually results in a Segmentation Fault.  
-    VS:  
-    a = &b; //a's type of int * and b's type of int + * = int * match. 
+    int *a; int b;
+    *a = b //a's type of int * - * = int and b's type of int + * = int * do match.
+           //The contents of what a points to is given the value of b, but a is pointing to junk that might not have write permissions or may be overwritten later.
+	   //This usually results in a Segmentation Fault.
+    VS:
+    a = &b; //a's type of int * and b's type of int + * = int * match.
 	    //What a points to is correctly assigned the address of b.
 ```
 
-***On top of this, *a would also correctly give the value of b.***
+***On top of this, *a would also correctly give the value of b.\***
 
 **Double Pointers:**
+
 Just like with single pointers, every pointer must be assigned, and the types must be right.  
-***The compiler doesn't automatically assign two spaces for double pointers to point correctly.***  
+**_The compiler doesn't automatically assign two spaces for double pointers to point correctly._**
 
 ```
-    int **a; int \*b; int c;  
-    a = &b; //a's type of int ** matches &b's type of int * + *  
-    b = &c; //b's type of int * matches &c's type of int + *  
-    //*a is b  
+    int **a; int \*b; int c;
+    a = &b; //a's type of int ** matches &b's type of int * + *
+    b = &c; //b's type of int * matches &c's type of int + *
+    //*a is b
     //\*\*a = *(b) is c
 ```
 
 **expr:**
+
 Since `*` is used both as a math operation and for pointers, expr() has the responsibility of differentiating between the two.  
-This is solved easily as every time expr() is entered, it should always start on a leaf, since every operation calls a next(). This means that if the token is a * when entering expr(), we know for sure that we are dealing with pointers.  
-Unless there is special notation (i.e. `*=`, which is handled as a unit), a multiplication operation always happens between two variables/numbers. Therefore the first multiplication symbol after an id must be a math operation.  
-Since expr() executes using this alteration between id's/numbers and operations (or leafs and nodes), expr() will always be able to tell if a `*` is associated with a pointer or not.
+This is solved easily as every time expr() is entered, it should always start on a leaf, since every operation calls a next(). This means that if the token is a _ when entering expr(), we know for sure that we are dealing with pointers.  
+Unless there is special notation (i.e. `_=`, which is handled as a unit), a multiplication operation always happens between two variables/numbers. Therefore the first multiplication symbol after an id must be a math operation. Since expr() executes using this alteration between id's/numbers and operations (or leafs and nodes), expr() will always be able to tell if a`\*` is associated with a pointer or not.
 
 **Calculation:**
 
 When declaring pointers, the number of indirections (number of stars) is noted by adding Ptr a similar number of times to the id's type.  
 By subtracting and adding Ptr's value we know how many indirections as well as the base type of the pointer. (See Pointer Calculation Example)  
-***Note that checking for pointer in expr() means I am processing/calculating the value.*** When using a pointer, I do not necessarily have to dereference all the way to the bottom.  
+**_Note that checking for pointer in expr() means I am processing/calculating the value._** When using a pointer, I do not necessarily have to dereference all the way to the bottom.
 
 - Assignments:
-    - Assignments don't need anything extra. since variables all have addresses we just need to fetch the address. (See [Patterns](#patterns))
+  - Assignments don't need anything extra. since variables all have addresses we just need to fetch the address. (See [Patterns](#patterns))
 - Single Pointer: `*a`
-    - call expr() id portion, then run LI
+  - call expr() id portion, then run LI
 - Multiple Pointers: `**a`
-    - call expr() id portion, call LI for as many dereferences as there are.
-    - Calling LI after LEA gets the contents at the address in eax. By doing this multiple times we step through the pointers until we get to the right location.
+  - call expr() id portion, call LI for as many dereferences as there are.
+  - Calling LI after LEA gets the contents at the address in eax. By doing this multiple times we step through the pointers until we get to the right location.
 
 # Virtual Machine
 
-The machine allocates space for the following:  
+The machine allocates space for the following:
 
-- Stack, which is pointed to/walked through by sp and bp  
-- gdata, Global data area, which is walked through just using gdata as a pointer  
-- cmd,  which is first added to by cmd as a pointer, and walked through by pc  
-- Text, which is pointed to/walked through by tp and tk  
-  
+- Stack, which is pointed to/walked through by sp and bp
+- gdata, Global data area, which is walked through just using gdata as a pointer
+- cmd, which is first added to by cmd as a pointer, and walked through by pc
+- Text, which is pointed to/walked through by tp and tk
+
 After parsing everything, the symbol table becomes irrelevant and the code gets ready to run.  
 pc is set to where the main function is called and starts walking through code  
-The virtual machine then runs all the commands and exits when it sees EXIT.  
+The virtual machine then runs all the commands and exits when it sees EXIT.
 
 # Instructions
 
-Here is an explanation of the currently supported instructions.  
-  
-**Scope Changing:**
-These instructions deal with entering and leaving functions. Any instruction with round brackets takes two spaces.  
+Here is an explanation of the currently supported instructions.
 
-- ENT(# params):  
-    - Save the bp to the stack, so we know where to return to  
-    - Move the sp to the same position  
-    - Leave space for the number of parameters coming in  
-- JSR:  
-    - Jump to Sub-Routine. Save pc and jump to new location.  
-- LEV:  
-    - Move the sp back to bp  
-    - Set bp back to the previous frame  
-    - Place the pc back to where it used to be  
+**Scope Changing:**
+These instructions deal with entering and leaving functions. Any instruction with round brackets takes two spaces.
+
+- ENT(# params):
+  - Save the bp to the stack, so we know where to return to
+  - Move the sp to the same position
+  - Leave space for the number of parameters coming in
+- JSR:
+  - Jump to Sub-Routine. Save pc and jump to new location.
+- LEV:
+  - Move the sp back to bp
+  - Set bp back to the previous frame
+  - Place the pc back to where it used to be
 
 **Fetching:**
 
-- LEA(variable offset):  
-    - Load Effective Address.  
-    - Loads the address of a variable into eax.  
-- IMM(value to load):  
-    - Loads preceding value into eax.  
-- PSH:  
-    - Places eax value into the stack.  
-- LI:  
-    - Load integer. Loads integer value from address in eax.  
-- SI:  
-    - Store Integer. Stores integer value to an address located in stack.  
+- LEA(variable offset):
+  - Load Effective Address.
+  - Loads the address of a variable into eax.
+- IMM(value to load):
+  - Loads preceding value into eax.
+- PSH:
+  - Places eax value into the stack.
+- LI:
+  - Load integer. Loads integer value from address in eax.
+- SI:
+  - Store Integer. Stores integer value to an address located in stack.
 
 **Flow:**
-- JMP(address to jump to):  
-    - Change pc to be the address that it's currently pointed to.  
-- BZ(address to jump to):  
-    - Branch (if) Zero. If eax = 1, continue. Else, jump.  
-- BNZ(address to jump to):  
-    - Branch (if) Not Zero. Opposite of BZ.	  
-- ADJ(Variable count):  
-    - Adjust sp so it overrides parameters when calling functions.   
-- EXIT:  
-    - Exits the whole program.  
-System Calls:  
-	PRTF(Uses ADJ's count. See Patterns):  
-		Calls the actual printf() system call, with parameters in the stack.  
-Operations:   
-	ADD:   
-		+ value in stack and eax together. Put in Stack  
-	SUB:   
-		- value in stack and eax together. Put in Stack  
-	MUL:  
-		* value in stack and eax together. Put in Stack  
-	DIV:  
-		/ value in stack and eax together. Put in Stack  
-	EQ:   
-		Check if top of stack and eax are equal. Place 1 or 0 in eax.  
-	NE:   
-		Check if top of stack and eax are not equal. Place result in eax.  
-	GE:   
-		Check if top of stack is greater or equal to eax. Place result in eax.  
-	LE:   
-		Check if top of stack is less than or equal to eax. Place result in eax.  
-	GT:   
-		Check if top of stack is greater than eax. Place result in eax.  
-	LT:   
-		Check if top of stack is less than eax. Place result in eax.
 
-# Patterns { : #patterns}
+- JMP(address to jump to):
+  - Change pc to be the address that it's currently pointed to.
+- BZ(address to jump to):
+  - Branch (if) Zero. If eax = 1, continue. Else, jump.
+- BNZ(address to jump to):
+  - Branch (if) Not Zero. Opposite of BZ.
+- ADJ(Variable count):
+  - Adjust sp so it overrides parameters when calling functions.
+- EXIT:
+  - Exits the whole program.
 
-    These patterns are always followed regardless of how the code is written; The steps to enter a function are always the same, etc.
-    Load Local Variable value:
-    	LEA (offset) -> LI
-    	Gets value of Local Variable from it's address in stack.
-    Load Global Variable value:
-    	IMM (addrs) -> LI
-    	Gets value of Global Variable from it's address in gdata.
-    Execute System Call:
-    	PRTF -> ADJ (param count)
-    	Call PRTF with param count number. Then move sp to erase all parameters.
-    Entering Function:
-    	ENT (param count)
-    	Runs ENT. (See Instructions)
-    Leaving Function:
-    	LEV -> ADJ (Entered param count)
-    	Runs LEV to shift bp and pc, and ADJ to move sp.
+**System Calls:**
 
-<h1>Pointer Calculation Example:</h1>
-	Declaration:  
-		`int **a; //a.Type = Int + Ptr + Ptr  
-		int *b; //b.Type = Int + Ptr  
-		int c;  `
-	Assignment:  
-		a = &b; //a's value in stack is given b's stack address (assuming local).   
-		b = &c; //b's value in stack is given c's stack address (assuming local).  
-		c = 5; //c is given value of 5.  
-	Usage:  
-		**a ...;  
-		type = a.Type - Ptr - Ptr = Int  
-  
-<h1>Expression Example:</h1>
-		For example, in the string 1 + 3 * 4 + 5; , Mul has a value of 162 and Add a value of 160.  
-		The tree would look like so:  
-		         +  
-			/ \  
-		       +   5  
-		      / \    
-		     1   *   
-		        / \  
-		       3   4  
-		If the compiler is LR, the output should agree with Post-Order Traversal of the tree, which would give 1 3 4 * + 5 +.   
-		1st expr:   
-			First expr will parse 1 -> + and enter the first while loop.  
-			string: 1 + 3 * 4 + 5;  
-			1st While loop:  
-				tk = Add, lvl = Assign  
-				PSH instruction  
-				Call 2nd expr(Add+1 = 161 = Sub)  
-		Cmd:  
-		+----------+  
-		|   IMM    |  
-		+----------+  
-		|    1     |  
-		+----------+  
-		|   PSH    |  
-		+----------+  
-		2nd expr:  
-			Second expr will parse 3 -> * and enter the second while loop.  
-			string: 3 * 4 + 5;  
-			2nd While loop:  
-				tk = Mul, lvl = Sub   
-				PSH instruction  
-				Call 3rd expr(Sub+1 = 162 = Mul)  
-		Cmd:  
-		+----------+  
-		|   IMM    |  
-		+----------+  
-		|    1     |  
-		+----------+  
-		|   PSH    |  
-		+----------+  
-		|   IMM    |  
-		+----------+  
-		|    3     |  
-		+----------+  
-		|   PSH    |  
-		+----------+  
-		3rd expr:  
-			Third expr will parse 4 -> + but stop at the while loop.  
-			string: 4 + 5;  
-			3rd While loop:  
-				tk = Add, lvl = Mul  
-				STOP. back to 2nd while loop  
-		Cmd:  
-		+----------+  
-		|   IMM    |  
-		+----------+  
-		|    1     |  
-		+----------+  
-		|   PSH    |  
-		+----------+  
-		|   IMM    |  
-		+----------+  
-		|    3     |  
-		+----------+  
-		|   PSH    |  
-		+----------+  
-		|   IMM    |  
-		+----------+  
-		|    4     |  
-		+----------+  
-			2nd While loop:  
-				Second while loop now has tk = +. It therefore adds its instruction and stops, as Add(160) is less than Sub(161).  
-				string: 5;  
-				tk = Add, lvl = Sub   
-				MUL instruction  
-				STOP. back to 1st While loop  
-		Cmd:  
-		+----------+  
-		|   IMM    |  
-		+----------+  
-		|    1     |  
-		+----------+  
-		|   PSH    |  
-		+----------+  
-		|   IMM    |  
-		+----------+  
-		|    3     |  
-		+----------+  
-		|   PSH    |  
-		+----------+  
-		|   IMM    |  
-		+----------+  
-		|    4     |  
-		+----------+  
-		|   MUL    |  
-		+----------+  
-			1st While loop:  
-				First while loop still has tk = +. Since this is still greater than the lvl of Assign, we run it again.  
-				string: 5;  
-				tk = Add, lvl = Assign   
-				ADD instruction  
-				Loop Again:  
-					Call 4th expr(Add+1 = 161 = Sub)  
-		Cmd:  
-		+----------+  
-		|   IMM    |  
-		+----------+  
-		|    1     |  
-		+----------+  
-		|   PSH    |  
-		+----------+  
-		|   IMM    |  
-		+----------+  
-		|    3     |  
-		+----------+  
-		|   PSH    |  
-		+----------+  
-		|   IMM    |  
-		+----------+  
-		|    4     |  
-		+----------+  
-		|   MUL    |  
-		+----------+  
-		|   ADD    |  
-		+----------+  
-		4th expr:  
-			Fourth expr will parse 5 and stop, since Id, or Num, are lower numbers in the enum. (see compiler.h)  
-			string: ;  
-			4th While loop:  
-				STOP. back to 1st while loop  
-				tk = Num, lvl = Sub  
-		Cmd:  
-		+----------+  
-		|   IMM    |  
-		+----------+  
-		|    1     |  
-		+----------+  
-		|   PSH    |  
-		+----------+  
-		|   IMM    |  
-		+----------+  
-		|    3     |  
-		+----------+  
-		|   PSH    |  
-		+----------+  
-		|   IMM    |  
-		+----------+  
-		|    4     |  
-		+----------+  
-		|   MUL    |  
-		+----------+  
-		|   ADD    |  
-		+----------+  
-		|   PSH    |  
-		+----------+  
-		|   IMM    |  
-		+----------+  
-		|    5     |  
-		+----------+  
-		1st expr:   
-			First expr will finally stop, since Num is less than Assign.  
-			string: ;  
-			1st While loop:  
-				tk = Num, lvl = Assign  
-				ADD instruction  
-				Finish.  
-		Cmd:  
-		+----------+  
-		|   IMM    |  
-		+----------+  
-		|    1     |  
-		+----------+  
-		|   PSH    |  
-		+----------+  
-		|   IMM    |  
-		+----------+  
-		|    3     |  
-		+----------+  
-		|   PSH    |  
-		+----------+  
-		|   IMM    |  
-		+----------+  
-		|    4     |  
-		+----------+  
-		|   MUL    |  
-		+----------+  
-		|   ADD    |  
-		+----------+  
-		|   PSH    |  
-		+----------+  
-		|   IMM    |  
-		+----------+  
-		|    5     |  
-		+----------+  
-		|   ADD    |  
-		+----------+  
-		Since cmd is run from top to bottom, this would be run as 1 3 4 * + 5 +. This therefore confirms that the compiler uses LR parsing, as well as reverse polish notation.
+- PRTF(Uses ADJ's count. See Patterns):
+
+  - Calls the actual printf() system call, with parameters in the stack.
+
+**Operations:**
+
+- ADD:
+  - `+` value in stack and eax together. Put in Stack
+- SUB:
+  - `-` value in stack and eax together. Put in Stack
+- MUL:
+  - `*` value in stack and eax together. Put in Stack
+- DIV:
+  - `/` value in stack and eax together. Put in Stack
+- EQ:
+  - Check if top of stack and eax are equal. Place 1 or 0 in eax.
+- NE:
+  - Check if top of stack and eax are not equal. Place result in eax.
+- GE:
+  - Check if top of stack is greater or equal to eax. Place result in eax.
+- LE:
+  - Check if top of stack is less than or equal to eax. Place result in eax.
+- GT:
+  - Check if top of stack is greater than eax. Place result in eax.
+- LT:
+  - Check if top of stack is less than eax. Place result in eax.
+
+# Patterns
+
+These patterns are always followed regardless of how the code is written; The steps to enter a function are always the same, etc.
+
+**Load Local Variable value:**
+
+    - LEA (offset) -> LI
+    - Gets value of Local Variable from it's address in stack.
+
+**Load Global Variable value:**
+
+    - IMM (addrs) -> LI
+    - Gets value of Global Variable from it's address in gdata.
+
+**Execute System Call:**
+
+    - PRTF -> ADJ (param count)
+    - Call PRTF with param count number. Then move sp to erase all parameters.
+
+**Entering Function:**
+
+    - ENT (param count)
+    - Runs ENT. (See Instructions)
+
+**Leaving Function:**
+
+    - LEV -> ADJ (Entered param count)
+    - Runs LEV to shift bp and pc, and ADJ to move sp.
+
+# Pointer Calculation Example
+
+**Declaration:**
+
+```
+    int **a; //a.Type = Int + Ptr + Ptr
+    int *b; //b.Type = Int + Ptr
+    int c;
+```
+
+**Assignment:**
+
+```
+    a = &b; //a's value in stack is given b's stack address (assuming local).
+    b = &c; //b's value in stack is given c's stack address (assuming local).
+    c = 5; //c is given value of 5.
+```
+
+**Usage:**
+
+```
+    **a ...;
+    type = a.Type - Ptr - Ptr = Int
+```
+
+# Expression Example
+
+For example, in the string `1 + 3 * 4 + 5`, Mul has a value of 162 and Add a value of 160.  
+The tree would look like so:
+
+```
+         +
+        / \
+       +   5
+      / \
+     1   *
+        / \
+       3   4
+```
+
+If the compiler is LR, the output should agree with Post-Order Traversal of the tree, which would give `1 3 4 * + 5 +`.
+
+**1st expr:**
+
+First expr will parse 1 -> + and enter the first while loop.
+
+```
+    string: 1 + 3 * 4 + 5;
+    1st While loop:
+    	tk = Add, lvl = Assign
+    	PSH instruction
+    	Call 2nd expr(Add+1 = 161 = Sub)
+
+    Cmd:
+	+----------+
+	|   IMM    |
+	+----------+
+	|    1     |
+	+----------+
+	|   PSH    |
+	+----------+
+```
+
+**2nd expr:**
+
+Second expr will parse 3 -> \* and enter the second while loop.
+
+```
+    string: 3 * 4 + 5;
+    2nd While loop:
+	tk = Mul, lvl = Sub
+	PSH instruction
+	Call 3rd expr(Sub+1 = 162 = Mul)
+    Cmd:
+	+----------+
+	|   IMM    |
+	+----------+
+	|    1     |
+	+----------+
+	|   PSH    |
+	+----------+
+	|   IMM    |
+	+----------+
+	|    3     |
+	+----------+
+	|   PSH    |
+	+----------+
+```
+
+**3rd expr:**
+
+Third expr will parse 4 -> + but stop at the while loop.
+
+```
+    string: 4 + 5;
+    3rd While loop:
+	tk = Add, lvl = Mul
+	STOP. back to 2nd while loop
+    Cmd:
+	+----------+
+	|   IMM    |
+	+----------+
+	|    1     |
+	+----------+
+	|   PSH    |
+	+----------+
+	|   IMM    |
+	+----------+
+	|    3     |
+	+----------+
+	|   PSH    |
+	+----------+
+	|   IMM    |
+	+----------+
+	|    4     |
+	+----------+
+```
+
+**2nd While loop:**
+
+Second while loop now has tk = +. It therefore adds its instruction and stops, as Add(160) is less than Sub(161).
+
+```
+    string: 5;
+    tk = Add, lvl = Sub
+    MUL instruction
+    STOP. back to 1st While loop
+    Cmd:
+	+----------+
+	|   IMM    |
+	+----------+
+	|    1     |
+	+----------+
+	|   PSH    |
+	+----------+
+	|   IMM    |
+	+----------+
+	|    3     |
+	+----------+
+	|   PSH    |
+	+----------+
+	|   IMM    |
+	+----------+
+	|    4     |
+	+----------+
+	|   MUL    |
+	+----------+
+```
+
+**1st While loop:**
+
+First while loop still has tk = +. Since this is still greater than the lvl of Assign, we run it again.
+
+```
+    string: 5;
+    tk = Add, lvl = Assign
+    ADD instruction
+    Loop Again:
+	Call 4th expr(Add+1 = 161 = Sub)
+    Cmd:
+	+----------+
+	|   IMM    |
+	+----------+
+	|    1     |
+	+----------+
+	|   PSH    |
+	+----------+
+	|   IMM    |
+	+----------+
+	|    3     |
+	+----------+
+	|   PSH    |
+	+----------+
+	|   IMM    |
+	+----------+
+	|    4     |
+	+----------+
+	|   MUL    |
+	+----------+
+	|   ADD    |
+	+----------+
+```
+
+**4th expr:**
+
+Fourth expr will parse 5 and stop, since Id, or Num, are lower numbers in the enum. (see [compiler.h](#compiler.h))
+
+```
+    string: ;
+    4th While loop:
+	STOP. back to 1st while loop
+	tk = Num, lvl = Sub
+    Cmd:
+	+----------+
+	|   IMM    |
+	+----------+
+	|    1     |
+	+----------+
+	|   PSH    |
+	+----------+
+	|   IMM    |
+	+----------+
+	|    3     |
+	+----------+
+	|   PSH    |
+	+----------+
+	|   IMM    |
+	+----------+
+	|    4     |
+	+----------+
+	|   MUL    |
+	+----------+
+	|   ADD    |
+	+----------+
+	|   PSH    |
+	+----------+
+	|   IMM    |
+	+----------+
+	|    5     |
+	+----------+
+```
+
+**1st expr:**
+
+First expr will finally stop, since Num is less than Assign.
+
+```
+    string: ;
+    1st While loop:
+	tk = Num, lvl = Assign
+	ADD instruction
+	Finish.
+    Cmd:
+	+----------+
+	|   IMM    |
+	+----------+
+	|    1     |
+	+----------+
+	|   PSH    |
+	+----------+
+	|   IMM    |
+	+----------+
+	|    3     |
+	+----------+
+	|   PSH    |
+	+----------+
+	|   IMM    |
+	+----------+
+	|    4     |
+	+----------+
+	|   MUL    |
+	+----------+
+	|   ADD    |
+	+----------+
+	|   PSH    |
+	+----------+
+	|   IMM    |
+	+----------+
+	|    5     |
+	+----------+
+	|   ADD    |
+	+----------+
+```
+
+Since cmd is run from top to bottom, this would be run as `1 3 4 * + 5 +`. This therefore confirms that the compiler uses LR parsing, as well as reverse polish notation.
