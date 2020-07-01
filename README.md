@@ -84,7 +84,7 @@ Contains the virtual machine and all necessary variables
 
 Contains the main function, which endlessly runs a while loop and exits when it sees the EXIT instruction.
 
-### compiler.h
+### compiler.h [compiler.h]
 
 Contains all variables used by both parser.c and vm.c.
 
