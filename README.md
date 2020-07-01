@@ -70,7 +70,7 @@ Parses statements
 
 **expr(int lvl):**
 
-Parses expressions. Very special. (See [Basic Logic](basic-logic))
+Parses expressions. Very special. (See [Basic Logic](#basic-logic))
 
 **glbl():**
 
@@ -118,17 +118,17 @@ Globals are any code that runs are located in the outermost scope of a C file.
 
 **Global Variables:**
 
-- added to symbol table (see [Patterns](patterns))
+- added to symbol table (see [Patterns](#patterns))
 
 **functions():**
 
 - added to symbol table
-- Calls stmt() after **{** (see [Patterns](patterns))
+- Calls stmt() after **{** (see [Patterns](#patterns))
 
 ## Statements
 
 Anything inside a function, but not an expression.  
-Anything in brackets will recursively call stmt() (i.e. if(){}).  
+Anything in brackets will recursively call stmt() (i.e. if(){}).
 
 **Local Variables:**
 
@@ -136,20 +136,20 @@ Anything in brackets will recursively call stmt() (i.e. if(){}).
 
 **if/else statment:**
 
-- Calls expr(int Assign) after **(** (see [Patterns](patterns))
+- Calls expr(int Assign) after **(** (see [Patterns](#patterns))
 
 **while statement:**
 
-- Calls expr(int Assign) after **(** (see [Patterns](patterns))
+- Calls expr(int Assign) after **(** (see [Patterns](#patterns))
 
 **return statement:**
 
-- Calls expr(int Assign) immediately (see [Patterns](patterns))
+- Calls expr(int Assign) immediately (see [Patterns](#patterns))
 
 ## Expressions
 
-Expressions utilize the Precedence Climbing Algorithm to ensure that operations are done in the right order.  
-Everytime expression is called it is given a level that corresponds to the order of operations enum table (see [compiler.h](compilerh)).  
+Expressions use the Precedence Climbing Algorithm to ensure that operations are done in the right order.  
+Everytime expression is called it is given a level that corresponds to the order of operations enum table (see [compiler.h](#compilerh)).  
 expr() always runs until the whole expression is calculated, and only then does the scope change back to stmt().  
 Entering expression always starts with the lowest level with the lowest integer value, Assign. Inside expr() it can recursively call itself with higher level values. This means that expr knows the previous expression that happened before it.
 
@@ -159,62 +159,75 @@ expr() is logically set up to create a tree:
 expr() always ends with a while loop that is run every time it is entered. This loop runs until the token scanned is smaller than the input level. Since expr always enters with Assign, the while loop only stops when tk < Assign, which is only when tk is a Num or Id. This logically makes those leaf nodes (see compiler.h enum)
 
 - Number:
-    Used as direct value
+  Used as direct value
 - id/Pointers/Addresses:
-    Parsed to get its value and get ready to use it. Can also be a system call. (See Variables)
+  Parsed to get its value and get ready to use it. Can also be a system call. (See Variables)
 - System Calls:
-    System calls are keywords included in the symbol table. When hit, expr() loads all parameters into the stack. The real system call is then called with all the parameters loaded in.
+  System calls are keywords included in the symbol table. When hit, expr() loads all parameters into the stack. The real system call is then called with all the parameters loaded in.
 
 **Nodes:**
-    			Operations:
-    				Add, Subtract, etc.
-    			Logical Operators:
-    				>, <, >=, ==
 
-    	***expr() uses LR parsing which translates the expression into Reverse Polish Notation through post-order traversal.***
-    	Post-order traversal (Left Right Root) is achieved through the layout of the function as follows:
-    		`expr(int lvl):
-    			Leaves
-    			while (tk >= lvl):
-    				if tk = ... :
-    					expr(tk + 1)
-    					Nodes
-    		`
-    	Leaves are always added as soon as expr is entered, while Nodes are only touched when a loop has finished. In other words the left and right are visited first before the root, which is post-order traversal.
-    	Calculations are only done once we have reached a point where the following operation is of a lower level than our current. We then roll back and calculate until the level is lower than that if the following operation. (See Expression Example)
-    	Logical operators also have a place in the heirarchy. (See compiler.h)
+- Operations:
+  Add, Subtract, etc.
+- Logical Operators: >, <, >=, ==
 
-<h1>Variables:</h1>
-	Local:  
-		Local variables are stored in the symbol table which holds their Tktype(id, system call), Type(int, char), Name(actual string), Class(Loc, Glo), and Value(offset/variable count (varc)).  
-		Depending on their Value, a function can determine whether or not it is a parameter, as parameters will be above the return points, whereas actual local variables will be below.  
-		Since local variables are only alive as long as the function's scope doesn't increase (i.e. don't return), they are stored in the stack.  
-		They can therefore be accessed using a calculted offset, instead of their actual memory address (See LEA/Patterns).  
-	Global:  
-		Global variables are stored similarly to local variables, but their value is the address in the data section of process (gdata) instead of an offset. (See Patterns)  
-  
-	Duplicates/Shadowing:  
-		If an id is used globally and also locally, the global declaration is moved to gblType, gblClass, gblValue and the local is put in its place. Once the scope exits the function, then everything is moved back. Since the symbol table is searched through and not pointed to, moving items around doesn't create any issues.  
-	Pointers:  
-		Pointers are sort of special so I wanted to give them their own section.  
-	        Only the most basic implementation of pointers is handled here (i.e. setting and getting values).  
-		Notes:  
-			Just some basic notes, since I find pointers confusing.  
-			Single Pointers:  
-				if a is declared as int *a:  
-				a, which is of type int *, will be the address that it points to  
-				*a, which is of type int * - * = int, will be the contents pointed to   
-				&a, which is of type int * + * = int **, will be the address of the pointer itself.  
-			Addresses:  
-				From the example above, adding an & creates another level of indirection and is the same as increasing the type by a *.  
-				& always gives you the address of the thing itself. So &&a is not a thing (thankfully).  
-			Assignments:  
-				***Since assigning does never has a *, it is treated as an id assignment. Assigning will never have any *'s, as that is assigning to what a pointer points to, which at the beginning is junk. Pointers therefore must be assigned before being used:***  
-				int *a; int b;  
-				*a = b //a's type of int * - * = int and b's type of int + * = int * do match. The contents of what a points to is given the value of b, but a is pointing to junk that might not have write permissions or may be overwritten later. This usually results in a Segmentation Fault.  
-				VS:  
-				a = &b;	//a's type of int * and b's type of int + * = int * match. What a points to is correctly assigned the address of b. ***On top of this, *a would also correctly give the value of b.***  
-			Double Pointers:  
+***expr() uses LR parsing which translates the expression into Reverse Polish Notation through post-order traversal.***  
+Post-order traversal (Left Right Root) is achieved through the layout of the function as follows:
+    expr(int lvl):
+        Leaves
+        while (tk >= lvl):
+            if tk = ... :
+                expr(tk + 1)
+                Nodes
+    
+Leaves are always added as soon as expr is entered, while Nodes are only touched when a loop has finished. In other words the left and right are visited first before the root, which is post-order traversal.  
+Calculations are only done once we have reached a point where the following operation is of a lower level than our current. We then roll back and calculate until the level is lower than that if the following operation. (See [Expression Example](#expression-example))  
+Logical operators also have a place in the heirarchy. (See [compiler.h](#compilerh))  
+
+# Variables
+
+**Local:**
+Local variables are stored in the symbol table which holds their Tktype(id, system call), Type(int, char), Name(actual string), Class(Loc, Glo), and Value(offset/variable count (varc)).  
+Depending on their Value, a function can determine whether or not it is a parameter, as parameters will be above the return points, whereas actual local variables will be below.  
+Since local variables are only alive as long as the function's scope doesn't increase (i.e. don't return), they are stored in the stack.  
+They can therefore be accessed using a calculted offset, instead of their actual memory address (See [LEA/Patterns](#patterns)).  
+
+**Global:**
+Global variables are stored similarly to local variables, but their value is the address in the data section of process (gdata) instead of an offset. (See [Patterns](#patterns))  
+
+**Duplicates/Shadowing:**
+If an id is used globally and also locally, the global declaration is moved to gblType, gblClass, gblValue and the local is put in its place. Once the scope exits the function, then everything is moved back. Since the symbol table is searched through and not pointed to, moving items around doesn't create any issues.  
+
+# Pointers
+
+Pointers are sort of special so I wanted to give them their own section.  
+Only the most basic implementation of pointers is handled here (i.e. setting and getting values).  
+
+### Notes
+
+Just some basic notes, since I find pointers confusing.  
+
+**Single Pointers:**
+
+- if `a` is declared as `int *a`:  
+- `a`, which is of type `int *`, will be the address that it points to  
+- `*a`, which is of type `int * - * = int`, will be the contents pointed to   
+- `&a`, which is of type `int * + * = int **`, will be the address of the pointer itself.  
+
+**Addresses:**
+
+- From the example above, adding an `&` creates another level of indirection and is the same as increasing the type by a `*`.  
+- `&` always gives you the address of the thing itself. So `&&a` is not a thing (thankfully).  
+
+**Assignments:**
+***Since assigning does never has a *, it is treated as an id assignment. Assigning will never have any *'s, as that is assigning to what a pointer points to, which at the beginning is junk. Pointers therefore must be assigned before being used:***  
+    int *a; int b;  
+    *a = b  //a's type of int * - * = int and b's type of int + * = int * do match. The contents of what a points to is given the value of b, but a is pointing to junk that might not have write permissions or may be overwritten later. This usually results in a Segmentation Fault.  
+    VS:  
+    a = &b; //a's type of int * and b's type of int + * = int * match. What a points to is correctly assigned the address of b. 
+    ***On top of this, *a would also correctly give the value of b.***  
+			
+**Double Pointers:**
 				Just like with single pointers, every pointer must be assigned, and the types must be right. ***The compiler doesn't automatically assign two spaces for double pointers to point correctly.***  
 					int **a; int *b; int c;  
 					a = &b; //a's type of int ** matches &b's type of int * + *  
@@ -313,27 +326,28 @@ expr() always ends with a while loop that is run every time it is entered. This 
 		GT:   
 			Check if top of stack is greater than eax. Place result in eax.  
 		LT:   
-			Check if top of stack is less than eax. Place result in eax.  
+			Check if top of stack is less than eax. Place result in eax.
 
 # Patterns { : #patterns}
 
-	These patterns are always followed regardless of how the code is written; The steps to enter a function are always the same, etc.  
-	Load Local Variable value:  
-		LEA (offset) -> LI   
-		Gets value of Local Variable from it's address in stack.  
-	Load Global Variable value:  
-		IMM (addrs) -> LI  
-		Gets value of Global Variable from it's address in gdata.  
-	Execute System Call:  
-		PRTF -> ADJ (param count)  
-		Call PRTF with param count number. Then move sp to erase all parameters.  
-	Entering Function:  
-		ENT (param count)  
-		Runs ENT. (See Instructions)  
-	Leaving Function:  
-		LEV -> ADJ (Entered param count)  
-		Runs LEV to shift bp and pc, and ADJ to move sp.  
-	  
+    These patterns are always followed regardless of how the code is written; The steps to enter a function are always the same, etc.
+    Load Local Variable value:
+    	LEA (offset) -> LI
+    	Gets value of Local Variable from it's address in stack.
+    Load Global Variable value:
+    	IMM (addrs) -> LI
+    	Gets value of Global Variable from it's address in gdata.
+    Execute System Call:
+    	PRTF -> ADJ (param count)
+    	Call PRTF with param count number. Then move sp to erase all parameters.
+    Entering Function:
+    	ENT (param count)
+    	Runs ENT. (See Instructions)
+    Leaving Function:
+    	LEV -> ADJ (Entered param count)
+    	Runs LEV to shift bp and pc, and ADJ to move sp.
+
+
 <h1>Pointer Calculation Example:</h1>
 	Declaration:  
 		`int **a; //a.Type = Int + Ptr + Ptr  
