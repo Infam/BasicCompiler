@@ -32,7 +32,7 @@ void next(){
 	while(tk = *tp++){ // while no useful token found
 		if(tk == '}' || tk == '{' || tk == ')' || tk == '(' || tk == ',' || tk == ';') return;
 		else if(tk == ' '){
-			while(*tp == ' ' && *tp != '0'){
+			while(*tp == ' ' && *tp != -1){
 				tp++;
 			}
 		}
@@ -47,7 +47,7 @@ void next(){
 		//Faster to check for cases then to let next run through all other possibilities
 		else if(tk == '/'){
 			if(*tp == '/'){
-				while(*tp != '\n' && *tp != '0'){ // where '0' is the end of string character, basically denoting end of file
+				while(*tp != '\n' && *tp != -1){ // where '0' is the end of string character, basically denoting end of file
 					tp++;
 				}
 			}
@@ -59,7 +59,7 @@ void next(){
 		//Define or include not handled
 		//Don't need to be looked at if line was comment
 		else if(tk == '#'){
-			while(*tp != '\n' && *tp != '0'){
+			while(*tp != '\n' && *tp != -1){
 				tp++;
 			}
 		}

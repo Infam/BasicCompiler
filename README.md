@@ -96,6 +96,11 @@ All the functions have a return type of void, because they never need to pass va
 # Simplifications
 
 - x86 Instructions are simplified, combined, or just removed
+- No struct keyword support
+- No preprocessor support
+- No typedef
+- No for loop support
+- No Switch statement support
 - No Void Type (As of 6/29/2020)
 - No in-line assignment (int a = 3; -> int a; a = 3;)
 - Only simulate one register (eax)

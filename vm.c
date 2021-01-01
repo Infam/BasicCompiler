@@ -73,7 +73,7 @@ int main(void){
 
 	check(mainaddr < 0,"No Main Function.");
 
-	pc = tab[mainaddr].Value;
+	pc = (int *)tab[mainaddr].Value;
 
 	while(1){ //Infinitely Run commands till finish
 		inst = *pc++;
